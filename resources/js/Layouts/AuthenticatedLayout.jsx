@@ -2,14 +2,26 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
-import { Link, usePage } from '@inertiajs/react';
+import {Link, router, usePage} from '@inertiajs/react';
 import { useState } from 'react';
+import Modal from "@/Components/Modal.jsx";
+import CreateOrganizationForm from "@/Pages/Organization/CreateOrganizationForm.jsx";
 
-export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+export default function AuthenticatedLayout({ header, children}) {
+    const { auth, organizations = [] } = usePage().props;
+    const user = auth.user;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
+
+
+    const [isCreateOrgModalOpen, setIsCreateOrgModalOpen] =
+        useState(false);
+
+    const handleOrgCreated = () => {
+        setIsCreateOrgModalOpen(false);
+        router.reload({ only: ['organizations'], preserveScroll: true });
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -31,9 +43,29 @@ export default function AuthenticatedLayout({ header, children }) {
                                     Dashboard
                                 </NavLink>
                             </div>
+                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                                {organizations.map((org) => (
+                                    <NavLink
+                                        key={org.id}
+                                        href={route('organization.show', { organization: org.id })}
+                                        active={route().current('organization.show', org.id)}
+                                    >
+                                        {org.name}
+                                    </NavLink>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
+                            <div className="sm:-my-px sm:ms-10">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateOrgModalOpen(true)}
+                                    className="bg-emerald-500 p-2 rounded-lg text-white shadow transition-all hover:bg-emerald-600 hover:text-gray-400"
+                                >
+                                    Create organization
+                                </button>
+                            </div>
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -171,6 +203,10 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>{children}</main>
+
+            <Modal show={isCreateOrgModalOpen} onClose={() => setIsCreateOrgModalOpen(false)}>
+                <CreateOrganizationForm onSuccess={handleOrgCreated} />
+            </Modal>
         </div>
     );
 }
