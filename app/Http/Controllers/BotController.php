@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bot;
+use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class BotController extends Controller
 {
@@ -50,7 +53,41 @@ class BotController extends Controller
      */
     public function edit(Bot $bot)
     {
-        //
+        // Проверка: только владелец организации может редактировать бота
+        $organization = $bot->organization;
+        
+        if (!$organization || Auth::id() !== $organization->owner_id) {
+            abort(403, 'Только владелец организации может редактировать бота');
+        }
+
+        return Inertia::render('Bot/Edit', [
+            'bot' => [
+                'id' => $bot->id,
+                'name' => $bot->name,
+                'status' => $bot->status,
+            ],
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ],
+        ]);
+    }
+
+    /**
+     * Display admin panel for the specified bot.
+     */
+    public function admin(Bot $bot)
+    {
+        // Проверка: только владелец организации может доступа к админ-панели бота
+        $organization = $bot->organization;
+
+        if (!$organization || Auth::id() !== $organization->owner_id) {
+            abort(403, 'Только владелец организации может управлять ботом');
+        }
+
+        // Редирект на панель Filament для конкретного бота
+        // Каждый бот имеет свою изолированную админ-панель с обучающим контентом
+        return redirect()->route('filament.bot.resources.index', ['bot' => $bot->id]);
     }
 
     /**
@@ -58,7 +95,28 @@ class BotController extends Controller
      */
     public function update(Request $request, Bot $bot)
     {
-        //
+        // Проверка: только владелец организации может редактировать бота
+        $organization = $bot->organization;
+        
+        if (!$organization || Auth::id() !== $organization->owner_id) {
+            abort(403, 'Только владелец организации может редактировать бота');
+        }
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'token' => 'nullable|string|max:500',
+        ]);
+
+        // Обновляем токен только если он был передан
+        if (!empty($data['token'])) {
+            $bot->token = $data['token'];
+        }
+        
+        $bot->name = $data['name'];
+        $bot->save();
+
+        return redirect()->route('organization.show', $organization->id)
+            ->with('success', 'Бот успешно обновлен');
     }
 
     /**
