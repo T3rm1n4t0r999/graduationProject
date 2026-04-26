@@ -28,19 +28,8 @@ class OrganizationResource extends JsonResource
             'plan' => $this->plan,
             'owner_id' => $this->owner_id,
             'settings' => $this->settings,
-
             'users' => $this->whenLoaded('users', fn() => UserResource::collection($this->users)),
-
-
-            'bots' => $this->whenLoaded('bots', function () use ($isOwner) {
-                return $this->bots->map(function ($bot) use ($isOwner) {
-                    $data = (new BotResource($bot))->toArray(request());
-                    if ($isOwner) {
-                        $data['token'] = $bot->token;
-                    }
-                    return $data;
-                });
-            }),
+            'bot' => $this->whenLoaded('bot', fn() => BotResource::collection($this->bot)),
         ];
     }
 }
