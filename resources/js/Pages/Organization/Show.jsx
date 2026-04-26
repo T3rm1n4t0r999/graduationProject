@@ -6,18 +6,16 @@ import Modal from "@/Components/Modal.jsx";
 import CreateBotForm from "@/Pages/Bot/CreateBotForm.jsx";
 import Pagination from "@/Components/Pagination.jsx";
 
-export default function Show({organization, users, bots}) {
+export default function Show({organization, users, bot}) {
     const statusConfig = ORGANIZATION_STATUS[organization.status] || DEFAULT_STATUS;
     const [isCreateBotModalOpen, setIsCreateBotModalOpen] = useState(false);
-    const organizationBot = bots.data?.[0] || null;
 
     const handleBotCreated = () => {
         setIsCreateBotModalOpen(false);
-        router.reload({ only: ['organization', 'bots'], preserveScroll: true });
+        router.reload({ only: ['organization', 'bot'], preserveScroll: true });
     };
 
     const hasUserPages = users?.meta?.last_page > 1;
-    const hasBotPages = bots?.meta?.last_page > 1;
 
     return (
         <AuthenticatedLayout
@@ -41,9 +39,9 @@ export default function Show({organization, users, bots}) {
                     </div>
                     
                     <div className="flex gap-3">
-                        {organizationBot ? (
+                        {bot ? (
                             <Link
-                                href={route('bot.edit', organizationBot.id)}
+                                href={route('bot.edit', bot.id)}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
