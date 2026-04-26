@@ -40,4 +40,8 @@ class Organization extends Model
     public function bots(){
         return $this->hasOne(Bot::class);
     }
+
+    public function bot(){
+        return $this->hasOne(Bot::class);
+    }
 }

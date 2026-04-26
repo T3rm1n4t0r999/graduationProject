@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('token')->unique();
             $table->string('status')->default('active');
-            $table->foreignId('organization_id');
+            $table->foreignId('organization_id')->unique()->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

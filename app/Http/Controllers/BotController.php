@@ -85,9 +85,9 @@ class BotController extends Controller
             abort(403, 'Только владелец организации может управлять ботом');
         }
 
-        // Редирект на панель Filament для конкретного бота
-        // Каждый бот имеет свою изолированную админ-панель с обучающим контентом
-        return redirect()->route('filament.bot.resources.index', ['bot' => $bot->id]);
+        // Редирект на панель Filament для управления контентом бота
+        // Контент (курсы, модули, уроки) будет отфильтрован по bot_id
+        return redirect()->route('filament.app.pages.dashboard');
     }
 
     /**
