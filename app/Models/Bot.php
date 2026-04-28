@@ -13,7 +13,7 @@ class Bot extends Model
     protected $fillable = [
         'name',
         'token',
-        'status',
+        'is_active',
         'organization_id'
     ];
 
@@ -22,7 +22,7 @@ class Bot extends Model
     ];
 
     protected $casts = [
-        'status' => 'string',
+        'is_active' => 'boolean',
         'token' => 'encrypted',
     ];
 

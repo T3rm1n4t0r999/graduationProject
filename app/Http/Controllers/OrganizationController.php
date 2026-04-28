@@ -49,15 +49,13 @@ class OrganizationController
             ->paginate(2, ['*'], 'users_page')
             ->withQueryString();
 
-        $bots = $organization->bots()
-            ->latest()
-            ->paginate(2, ['*'], 'bots_page')
-            ->withQueryString();
+        $bot = $organization->bot;
+
 
         return Inertia::render('Organization/Show', [
             'organization' => new OrganizationResource($organization),
             'users' => UserResource::collection($users),
-            'bots' => BotResource::collection($bots),
+            'bot' => $bot ? new BotResource($bot) : null,
         ]);
     }
 }

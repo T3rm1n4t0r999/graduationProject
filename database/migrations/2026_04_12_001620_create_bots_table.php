@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,9 +14,9 @@ return new class extends Migration
         Schema::create('bots', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('token')->unique();
-            $table->string('status')->default('active');
-            $table->foreignId('organization_id');
+            $table->text('token')->unique();
+            $table->boolean('is_active')->default('false');
+            $table->foreignId('organization_id')->unique()->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

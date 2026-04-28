@@ -37,7 +37,7 @@ class Organization extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function bots(){
+    public function bot(){
         return $this->hasOne(Bot::class);
     }
 }

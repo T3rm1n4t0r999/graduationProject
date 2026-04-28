@@ -21,7 +21,7 @@ class BotResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'username' => $this->username,
-            'status' => $this->status,
+            'is_active' => $this->is_active,
         ];
     }
 }

@@ -4,16 +4,20 @@ use App\Http\Controllers\BotController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WelcomeController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::redirect('/', '/dashboard');
+Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('organization', OrganizationController::class);
-    Route::resource('bot', BotController::class);
+    Route::resource('bot', BotController::class)->except('toggleStatus');
+    Route::get('/bot/{bot}/admin', [BotController::class, 'admin'])->name('bot.admin');
+    Route::post('/bot/{bot}/toggle', [BotController::class, 'toggleStatus'])
+        ->name('bot.toggle');
 });
 
 Route::middleware('auth')->group(function () {

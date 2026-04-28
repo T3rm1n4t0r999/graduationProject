@@ -16,8 +16,8 @@ class BotFactory extends Factory
         return [
             'name' => fake()->words(2, true),
             'token' => fake()->text(10),
-            'organization_id' => rand(1,3),
-            'status' => fake()->randomElement(['running', 'stopped', 'error']),
+            'organization_id' => rand(2,3),
+            'is_active' => false,
         ];
     }
 }

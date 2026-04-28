@@ -18,8 +18,6 @@ class OrganizationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $isOwner = Auth::id() === $this->owner_id;
-
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -28,8 +26,6 @@ class OrganizationResource extends JsonResource
             'plan' => $this->plan,
             'owner_id' => $this->owner_id,
             'settings' => $this->settings,
-            'users' => $this->whenLoaded('users', fn() => UserResource::collection($this->users)),
-            'bot' => $this->whenLoaded('bot', fn() => BotResource::collection($this->bot)),
         ];
     }
 }
