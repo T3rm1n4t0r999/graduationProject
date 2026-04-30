@@ -9,6 +9,10 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+Route::get('/error/{status}', function ($status) {
+    return Inertia::render('Error', ['status' => $status]);
+})->name('error');
+
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {

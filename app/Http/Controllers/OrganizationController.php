@@ -8,11 +8,12 @@ use App\Http\Resources\BotResource;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\UserResource;
 use App\Models\Organization;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class OrganizationController
+class OrganizationController extends Controller
 {
     public function store(StoreOrganizationRequest $request){
         $validated = $request->validated();
@@ -40,7 +41,11 @@ class OrganizationController
         });
     }
 
+    /**
+     * @throws AuthorizationException
+     */
     public function show(Organization $organization){
+        $this->authorize('view', $organization);
         $organization->load(['owner']);
 
         $users = $organization->users()

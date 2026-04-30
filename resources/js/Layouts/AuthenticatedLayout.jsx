@@ -2,13 +2,25 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import {Link, router, usePage} from '@inertiajs/react';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import Modal from "@/Components/Modal.jsx";
 import CreateOrganizationForm from "@/Pages/Organization/CreateOrganizationForm.jsx";
+import ToasterNotification from "@/Components/ToasterNotification.jsx";
+import {toast} from "sonner";
+
 
 export default function AuthenticatedLayout({ header, children}) {
-    const { auth, organizations = [] } = usePage().props;
+    const { auth, organizations = [], flash} = usePage().props;
     const user = auth.user;
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]); // Срабатывает при изменении flash данных
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -23,6 +35,7 @@ export default function AuthenticatedLayout({ header, children}) {
     };
 
     return (
+
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
             {/* Декоративные элементы фона */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -237,7 +250,7 @@ export default function AuthenticatedLayout({ header, children}) {
                     </div>
                 </header>
             )}
-
+            <ToasterNotification/>
             <main className="relative z-10">{children}</main>
 
             <Modal show={isCreateOrgModalOpen} onClose={() => setIsCreateOrgModalOpen(false)}>
