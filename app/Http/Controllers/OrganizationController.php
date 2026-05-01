@@ -70,7 +70,7 @@ class OrganizationController extends Controller
 
         session(['filament.organization_id' => $organization->id]);
 
-        return redirect()->route('filament.admin.pages.dashboard');
+        return redirect()->to(route('filament.admin.pages.dashboard', ['tenant' => $organization->id]));
     }
 
 }

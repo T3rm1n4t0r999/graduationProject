@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin/{organization}')
+            ->login()
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -57,6 +58,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->tenant(Organization::class)
             ->tenantRegistration(false)
-            ->tenantProfile(false);
+            ->tenantProfile(false)
+            ->tenantMenu(false);
     }
 }
