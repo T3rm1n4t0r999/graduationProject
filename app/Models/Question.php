@@ -42,4 +42,9 @@ class Question extends Model
         return $this->belongsTo(Organization::class);
     }
 
+    public function questionable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
 }

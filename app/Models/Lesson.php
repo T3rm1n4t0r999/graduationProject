@@ -38,8 +38,8 @@ class Lesson extends Model
         return $this->hasMany(LessonTask::class);
     }
 
-    public function course(): HasOne
+    public function course(): BelongsTo
     {
-        return $this->module->course();
+        return $this->belongsToThrough(Course::class, Module::class);
     }
 }

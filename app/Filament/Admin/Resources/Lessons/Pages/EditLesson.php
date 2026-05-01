@@ -3,7 +3,7 @@
 namespace App\Filament\Admin\Resources\Lessons\Pages;
 
 use App\Filament\Admin\Resources\Lessons\LessonResource;
-use Filament\Actions;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditLesson extends EditRecord
@@ -13,12 +13,7 @@ class EditLesson extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
-    }
-
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
     }
 }
