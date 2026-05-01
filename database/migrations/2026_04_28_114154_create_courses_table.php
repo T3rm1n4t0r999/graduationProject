@@ -12,8 +12,12 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description')->nullable();
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
+            $table->index('organization_id');
             $table->index('title');
         });
     }

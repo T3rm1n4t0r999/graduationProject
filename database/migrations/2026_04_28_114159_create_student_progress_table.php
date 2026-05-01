@@ -25,7 +25,9 @@ return new class extends Migration
             $table->integer('max_points')->default(0);
             $table->integer('attempt')->default(1); // Убрали autoIncrement()
             $table->json('metadata')->nullable();
-
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
             // Уникальный индекс для предотвращения дублирования попыток
@@ -40,6 +42,7 @@ return new class extends Migration
             $table->index(['progressable_type', 'progressable_id']);
             $table->index(['student_id', 'progressable_type', 'progressable_id']);
             $table->index(['student_id', 'attempt']);
+            $table->index('organization_id');
             $table->index(['points']); // Для поиска лучших результатов
         });
     }

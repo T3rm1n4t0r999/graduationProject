@@ -16,8 +16,13 @@ class LessonMaterial extends Model
         'content',
         'order',
         'material_type',
-        'lesson_id'
+        'lesson_id',
+        'organization_id'
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     protected $casts = [
         'order' => 'integer',

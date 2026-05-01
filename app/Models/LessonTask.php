@@ -18,7 +18,12 @@ class LessonTask extends Model
         'description',
         'max_score',
         'lesson_id',
+        'organization_id'
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     protected $casts = [
         'max_score' => 'integer',

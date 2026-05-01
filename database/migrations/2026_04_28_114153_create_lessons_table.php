@@ -14,9 +14,13 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->foreignId('module_id')
                 ->constrained('modules')
-                ->onDelete('cascade'); // Удаляем уроки при удалении модуля
+                ->cascadeOnDelete();
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
+            $table->index('organization_id');
             $table->index('title');
             $table->index('module_id');
         });

@@ -18,11 +18,16 @@ class Homework extends Model
         'description',
         'max_score',
         'task_id',
+        'organization_id',
     ];
 
     protected $casts = [
         'max_score' => 'integer',
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     public function task(): BelongsTo
     {

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Lesson extends Model
 {
@@ -15,8 +16,12 @@ class Lesson extends Model
         'title',
         'description',
         'module_id',
-
+        'organization_id'
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     public function module(): BelongsTo
     {
@@ -33,7 +38,7 @@ class Lesson extends Model
         return $this->hasMany(LessonTask::class);
     }
 
-    public function course()
+    public function course(): HasOne
     {
         return $this->module->course();
     }

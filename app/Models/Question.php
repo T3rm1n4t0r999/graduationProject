@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Question extends Model
@@ -35,4 +37,9 @@ class Question extends Model
         'points' => 1,
         'order' => 0,
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
+
 }

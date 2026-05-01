@@ -10,11 +10,15 @@ return new class extends Migration
     {
         Schema::create('student_courses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained()->onDelete('cascade');
-            $table->foreignId('course_id')->constrained()->onDelete('cascade');
+            $table->foreignId('student_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->string('granted_by')->default('admin');
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamp('granted_at')->useCurrent();
 
+            $table->index('organization_id');
             $table->unique(['student_id', 'course_id']);
         });
     }

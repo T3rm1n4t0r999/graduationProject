@@ -13,10 +13,16 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->integer('max_score')->default(0);
-            $table->foreignId('task_id')->constrained('lesson_task')->onDelete('cascade');
+            $table->foreignId('task_id')
+                ->constrained('lesson_task')
+                ->cascadeOnDelete();
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
             // Индексы
+            $table->index('organization_id');
             $table->index('task_id');
         });
     }

@@ -21,6 +21,7 @@ class StudentProgress extends Model
         'max_points',
         'metadata',
         'attempt',
+        'organization_id'
     ];
 
     protected $casts = [
@@ -37,6 +38,10 @@ class StudentProgress extends Model
         'max_points' => 0,
         'attempt' => 1,
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     public function student(): BelongsTo
     {

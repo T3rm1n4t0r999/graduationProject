@@ -15,7 +15,12 @@ class StudentHomework extends Model
     protected $fillable = [
         'homework_id',
         'student_id',
+        'organization_id'
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     // Отношение к домашнему заданию
     public function homework(): BelongsTo

@@ -14,9 +14,15 @@ return new class extends Migration
             $table->text('content')->nullable();
             $table->integer('order')->default(0);
             $table->enum('material_type', ['theory', 'example', 'reference', 'video_lesson', 'article'])->default('theory');
-            $table->foreignId('lesson_id')->constrained()->onDelete('cascade');
+            $table->foreignId('lesson_id')
+                ->constrained('lessons')
+                ->cascadeOnDelete();
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
+            $table->index('organization_id');
             $table->index('lesson_id');
         });
     }

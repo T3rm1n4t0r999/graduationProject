@@ -15,8 +15,12 @@ class Module extends Model
         'title',
         'description',
         'course_id',
-
+        'organization_id',
     ];
+
+    public function organization(): BelongsTo{
+        return $this->belongsTo(Organization::class);
+    }
 
     /**
      * Курс модуля
@@ -24,5 +28,9 @@ class Module extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function lessons(): HasMany{
+        return $this->hasMany(Lesson::class);
     }
 }

@@ -16,6 +16,7 @@ class StudentCourse extends Model
         'course_id',
         'granted_by',
         'granted_at',
+        'organization_id'
     ];
 
     public function student()

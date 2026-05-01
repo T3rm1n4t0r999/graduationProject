@@ -30,10 +30,13 @@ return new class extends Migration
             // Дополнительные поля (только те, что есть в модели)
             $table->json('metadata')->nullable();
             $table->text('explanation')->nullable();
-
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
             // Индексы
+            $table->index('organization_id');
             $table->index(['questionable_type', 'questionable_id', 'order']);
         });
     }

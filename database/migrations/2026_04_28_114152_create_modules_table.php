@@ -15,9 +15,15 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description')->nullable();
-            $table->foreignId('course_id')->constrained('courses')->cascadeOnDelete();
+            $table->foreignId('course_id')
+                ->constrained('courses')
+                ->cascadeOnDelete();
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
+            $table->index('organization_id');
             $table->index('title');
             $table->index('course_id');
         });

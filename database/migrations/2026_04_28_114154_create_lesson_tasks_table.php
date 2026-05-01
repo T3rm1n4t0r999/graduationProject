@@ -13,9 +13,15 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->integer('max_score')->default(0);
-            $table->foreignId('lesson_id')->constrained()->onDelete('cascade');
+            $table->foreignId('lesson_id')
+                ->constrained('lessons')
+                ->cascadeOnDelete();
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
+            $table->index('organization_id');
             $table->index('lesson_id');
         });
     }

@@ -17,9 +17,13 @@ return new class extends Migration
             $table->enum('role', ['guest', 'student', 'premium'])->default('guest');
             $table->bigInteger('score')->default(0);
             $table->string('rank')->default('Новичок');
+            $table->foreignId('organization_id')
+                ->constrained('organizations')
+                ->cascadeOnDelete();
             $table->timestamps();
 
             // Индексы для оптимизации
+            $table->index('organization_id');
             $table->index('telegram_id');
             $table->index('role');
             $table->index('score');
