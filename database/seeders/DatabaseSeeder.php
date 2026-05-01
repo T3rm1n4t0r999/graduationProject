@@ -18,12 +18,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-//        // 1️⃣ Сначала создаём пользователей
-//        User::create([
-//            'name' => 'Super Admin',
-//            'email' => 'admin@example.com',
-//            'password' => Hash::make('password'),
-//        ]);
+        // 1️⃣ Сначала создаём пользователей
+        User::create([
+            'name' => 'Super Admin',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+        ]);
 
         $users = User::factory()->count(10)->create();
 

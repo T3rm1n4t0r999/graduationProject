@@ -2,106 +2,48 @@
 
 namespace App\Filament\Admin\Resources\Courses;
 
-use App\Filament\Admin\Resources\Courses\Pages\CreateCourse;
-use App\Filament\Admin\Resources\Courses\Pages\EditCourse;
-use App\Filament\Admin\Resources\Courses\Pages\ListCourses;
+use App\Filament\Admin\Resources\Courses\Schemas\CourseForm;
+use App\Filament\Admin\Resources\Courses\Tables\CoursesTable;
 use App\Models\Course;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class CourseResource extends Resource
 {
     protected static ?string $model = Course::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+    protected static string|null|\BackedEnum $navigationIcon = Heroicon::OutlinedAcademicCap;
+    protected static ?string $navigationLabel = 'Курсы';
+    protected static ?string $modelLabel = 'Курс';
+    protected static ?string $pluralModelLabel = 'Курсы';
+    protected static string|null|\UnitEnum $navigationGroup = 'Обучающие материалы';
 
-    protected static ?string $navigationGroup = 'Learning Materials';
-
-    protected static ?int $navigationSort = 1;
-
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                TextInput::make('title')
-                    ->label('Title')
-                    ->required()
-                    ->maxLength(255),
-                
-                Textarea::make('description')
-                    ->label('Description')
-                    ->rows(3)
-                    ->columnSpanFull(),
-                
-                Select::make('organization_id')
-                    ->label('Organization')
-                    ->relationship('organization', 'name')
-                    ->required()
-                    ->searchable()
-                    ->preload(),
-            ]);
+        return CourseForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable(),
-                
-                TextColumn::make('title')
-                    ->label('Title')
-                    ->searchable()
-                    ->sortable(),
-                
-                TextColumn::make('organization.name')
-                    ->label('Organization')
-                    ->searchable()
-                    ->sortable(),
-                
-                TextColumn::make('modules_count')
-                    ->label('Modules')
-                    ->counts('modules'),
-                
-                TextColumn::make('created_at')
-                    ->label('Created At')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->bulkActions([
-                //
-            ]);
+        return CoursesTable::configure($table);
     }
 
     public static function getRelations(): array
     {
         return [
-            //
+            // Можно добавить RelationManager для модулей:
+            // \App\Filament\Admin\Resources\CourseResource\RelationManagers\ModulesRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ListCourses::route('/'),
-            'create' => CreateCourse::route('/create'),
-            'edit' => EditCourse::route('/{record}/edit'),
+            'index' => Pages\ListCourses::route('/'),
+            'create' => Pages\CreateCourse::route('/create'),
+            'edit' => Pages\EditCourse::route('/{record}/edit'),
         ];
     }
 }
