@@ -31,9 +31,9 @@ class Organization extends Model implements HasTenants
 
     public function users(): belongsToMany {
         return $this->belongsToMany(User::class, 'organization_user')
-                    ->using(OrganizationUser::class)
-                    ->withPivot('role', 'is_active', 'joined_at')
-                    ->withTimestamps();
+            ->using(OrganizationUser::class)
+            ->withPivot('role', 'is_active', 'joined_at')
+            ->withTimestamps();
     }
     public function owner(): BelongsTo
     {
@@ -65,12 +65,34 @@ class Organization extends Model implements HasTenants
             return false;
         }
 
-        return $this->id === $tenant->user_id || $tenant->users()->where('user_id', $this->id)->exists();
+        // Проверяем, есть ли у текущего пользователя доступ к этой организации
+        // $this в данном контексте - это пользователь (User), так как метод вызывается на экземпляре User
+        // Но так как этот метод определен в модели Organization, нам нужно получить текущего пользователя из auth
+        $user = auth()->user();
+
+        if (!$user instanceof User) {
+            return false;
+        }
+
+        return $user->organizations()
+            ->where('organizations.id', $tenant->id)
+            ->whereIn('organization_user.role', ['owner', 'member'])
+            ->wherePivot('is_active', true)
+            ->exists();
     }
 
     public function getTenants(Panel $panel): array|Collection
     {
-        return $this->organizations()->get();
+        $user = auth()->user();
+
+        if (!$user instanceof User) {
+            return collect();
+        }
+
+        return $user->organizations()
+            ->whereIn('organization_user.role', ['owner', 'member'])
+            ->wherePivot('is_active', true)
+            ->get();
     }
 
 
