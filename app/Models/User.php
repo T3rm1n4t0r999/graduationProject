@@ -53,4 +53,13 @@ class User extends Authenticatable
                     ->withPivot('role', 'is_active', 'joined_at')
                     ->withTimestamps();
     }
+
+    public function getOrganizationById(int $organizationId)
+    {
+        return $this->organizations()
+            ->where('organizations.id', $organizationId)
+            ->whereIn('organization_user.role', ['owner', 'member'])
+            ->wherePivot('is_active', true)
+            ->first();
+    }
 }

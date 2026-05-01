@@ -63,4 +63,14 @@ class OrganizationController extends Controller
             'bot' => $bot ? new BotResource($bot) : null,
         ]);
     }
+
+    public function admin(Organization $organization)
+    {
+        $this->authorize('view', $organization);
+
+        session(['filament.organization_id' => $organization->id]);
+
+        return redirect()->route('filament.admin.pages.dashboard');
+    }
+
 }

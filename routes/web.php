@@ -19,7 +19,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('organization', OrganizationController::class);
     Route::resource('bot', BotController::class)->except('toggleStatus');
-    Route::get('/bot/{bot}/admin', [BotController::class, 'admin'])->name('bot.admin');
+    Route::get('/organization/{organization}/admin', [OrganizationController::class, 'admin'])
+        ->name('organization.admin');
     Route::post('/bot/{bot}/toggle', [BotController::class, 'toggleStatus'])
         ->name('bot.toggle');
 });

@@ -96,19 +96,6 @@ class BotController extends Controller
     {
         //
     }
-
-    public function admin(Bot $bot)
-    {
-        $this->authorize('view', $bot);
-
-        // Опция 1: Использование хелпера filament (рекомендуется)
-        // Он автоматически перенаправит на дашборд активной панели
-        return redirect()->intended(filament()->getUrl());
-
-        // Опция 2: Если нужно перенаправить именно на список ресурсов или конкретную страницу
-        //return redirect()->route('filament.admin.resources.bots.index');
-    }
-
     /**
      * Переключить статус бота (Запуск/Остановка)
      */
