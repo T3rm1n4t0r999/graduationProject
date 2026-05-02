@@ -47,4 +47,32 @@ class Question extends Model
         return $this->morphTo();
     }
 
+    /**
+     * Boot метод для обновления max_score у родительского задания при изменении вопроса
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Обновляем max_score у LessonTask при сохранении вопроса
+        static::saved(function ($question) {
+            if ($question->questionable_type === 'App\\Models\\LessonTask' && $question->questionable_id) {
+                $lessonTask = LessonTask::find($question->questionable_id);
+                if ($lessonTask) {
+                    $lessonTask->updateMaxScore();
+                }
+            }
+        });
+
+        // Обновляем max_score у LessonTask при удалении вопроса
+        static::deleted(function ($question) {
+            if ($question->questionable_type === 'App\\Models\\LessonTask' && $question->questionable_id) {
+                $lessonTask = LessonTask::find($question->questionable_id);
+                if ($lessonTask) {
+                    $lessonTask->updateMaxScore();
+                }
+            }
+        });
+    }
+
 }

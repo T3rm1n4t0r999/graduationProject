@@ -60,18 +60,26 @@ class LessonTask extends Model
     {
         parent::boot();
 
-        // Обновляем max_score при сохранении LessonTask (если нужно)
+        // Обновляем max_score при сохранении LessonTask
         static::saved(function ($lessonTask) {
-            // Можно убрать или оставить с осторожностью
-            // $lessonTask->updateMaxScore();
+            $lessonTask->updateMaxScore();
         });
 
-        // Обработка событий для связанных вопросов
-        static::updated(function ($lessonTask) {
-            // Если изменились связанные данные, которые влияют на max_score
-            if ($lessonTask->isDirty('max_score')) {
-                // Дополнительная логика если нужна
-            }
+        // Обновляем max_score при удалении LessonTask
+        static::deleted(function ($lessonTask) {
+            // Логика при удалении если нужна
         });
+    }
+
+    /**
+     * Обновить max_score на основе суммы баллов всех вопросов
+     */
+    public function updateMaxScore(): void
+    {
+        $totalScore = $this->questions()->sum('points');
+
+        if ($this->max_score !== $totalScore) {
+            $this->update(['max_score' => $totalScore]);
+        }
     }
 }

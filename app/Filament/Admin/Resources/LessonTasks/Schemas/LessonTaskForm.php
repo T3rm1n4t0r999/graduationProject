@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Admin\Resources\Lessons\Schemas;
+namespace App\Filament\Admin\Resources\LessonTasks\Schemas;
 
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
-class LessonForm
+class LessonTaskForm
 {
     public static function configure(Schema $schema): Schema
     {
@@ -18,14 +18,14 @@ class LessonForm
                 Section::make('Основная информация')
                     ->schema([
                         TextInput::make('title')
-                            ->label('Название урока')
+                            ->label('Название задания')
                             ->required()
                             ->maxLength(255)
                             ->columnSpanFull(),
 
-                        Select::make('module_id')
-                            ->label('Модуль')
-                            ->relationship('module', 'title', function ($query) {
+                        Select::make('lesson_id')
+                            ->label('Урок')
+                            ->relationship('lesson', 'title', function ($query) {
                                 $tenant = \Filament\Facades\Filament::getTenant();
                                 if ($tenant) {
                                     $query->where('organization_id', $tenant->id);
@@ -36,12 +36,26 @@ class LessonForm
                             ->preload()
                             ->native(false),
 
-                        RichEditor::make('description')
+                        Textarea::make('description')
                             ->label('Описание')
                             ->nullable()
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+
                     ])
                     ->columns(1),
+
+                Section::make('Баллы')
+                    ->description('Максимальный балл рассчитывается автоматически на основе суммы баллов всех вопросов')
+                    ->schema([
+                        TextInput::make('max_score')
+                            ->label('Максимальный балл')
+                            ->numeric()
+                            ->disabled()
+                            ->default(0)
+                            ->helperText('Сумма баллов всех вопросов задания'),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
 
                 Section::make('Системные поля')
                     ->schema([
