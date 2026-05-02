@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Admin\Widgets\RecentStudentProgress;
+use App\Filament\Admin\Widgets\StatsOverview;
+use App\Filament\Admin\Widgets\StudentProgressChart;
 use App\Models\Organization;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -39,8 +42,9 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                StatsOverview::class,
+                StudentProgressChart::class,
+                RecentStudentProgress::class,
             ])
             ->middleware([
                 EncryptCookies::class,
