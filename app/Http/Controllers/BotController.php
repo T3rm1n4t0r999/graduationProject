@@ -121,6 +121,8 @@ class BotController extends Controller
             if ($response->successful()) {
                 // Обновляем статус в базе данных только если внешний сервис ответил успешно
                 $bot->update(['is_active' => $newStatus]);
+            } else if(!$response->successful() && !$newStatus) {
+                $bot->update(['is_active' => $newStatus]);
             } else {
                 return back()->with('error', 'Ошибка запуска бота. Внешний сервис недоступен.');
             }
