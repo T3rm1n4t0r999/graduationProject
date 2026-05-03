@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('role', ['guest', 'student', 'premium'])->default('guest');
             $table->bigInteger('score')->default(0);
             $table->string('rank')->default('Новичок');
-            $table->foreignId('organization_id')
+            $table->foreignId('organization_id')->nullable()
                 ->constrained('organizations')
                 ->cascadeOnDelete();
             $table->timestamps();

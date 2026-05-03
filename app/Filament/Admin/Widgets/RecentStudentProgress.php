@@ -3,8 +3,6 @@
 namespace App\Filament\Admin\Widgets;
 
 use App\Models\StudentProgress;
-use App\Models\LessonTask;
-use App\Models\Homework;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -23,7 +21,7 @@ class RecentStudentProgress extends BaseWidget implements Tables\Contracts\HasTa
         $organization = filament()->getTenant();
 
         if (!$organization) {
-            return StudentProgress::where('id', 0); // Пустой запрос если нет организации
+            return StudentProgress::whereRaw('1 = 0'); // Более чистый способ вернуть пустоту
         }
 
         return StudentProgress::where('organization_id', $organization->id)
@@ -80,6 +78,10 @@ class RecentStudentProgress extends BaseWidget implements Tables\Contracts\HasTa
             ])
             ->defaultSort('updated_at', 'desc')
             ->paginated([10, 25, 50])
-            ->defaultPaginationPageOption(10);
+            ->defaultPaginationPageOption(10)
+
+            // ✅ ВОТ ЭТО ИСПРАВЛЯЕТ СООБЩЕНИЕ "НЕ НАЙДЕНО":
+            ->emptyStateHeading('Нет данных')
+            ->emptyStateDescription('Студенты еще не выполняли задания в этой организации.');
     }
 }
