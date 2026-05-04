@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BotController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomeController;
@@ -18,6 +19,7 @@ Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('organization', OrganizationController::class);
+    Route::resource('invitations', InvitationController::class);
     Route::resource('bot', BotController::class)->except('toggleStatus');
     Route::get('/organization/{organization}/admin', [OrganizationController::class, 'admin'])
         ->name('organization.admin');

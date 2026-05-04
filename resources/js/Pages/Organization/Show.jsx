@@ -5,15 +5,22 @@ import {useState} from "react";
 import Modal from "@/Components/Modal.jsx";
 import CreateBotForm from "@/Pages/Bot/CreateBotForm.jsx";
 import Pagination from "@/Components/Pagination.jsx";
+import CreateInvitationForm from "@/Pages/Invitation/CreateInvitationForm.jsx";
 
 export default function Show({organization, users, bot}) {
     const statusConfig = ORGANIZATION_STATUS[organization.status] || DEFAULT_STATUS;
     const [isCreateBotModalOpen, setIsCreateBotModalOpen] = useState(false);
+    const [isCreateInvitationModalOpen, setIsCreateInvitationModalOpen] = useState(false);
     const [isToggling, setIsToggling] = useState(false);
 
     const handleBotCreated = () => {
         setIsCreateBotModalOpen(false);
         router.reload({only: ['organization', 'bot'], preserveScroll: true});
+    };
+
+    const handleInvitationCreated = () => {
+        setIsCreateInvitationModalOpen(false);
+        //router.reload({only: ['organization', 'invitation'], preserveScroll: true});
     };
 
     const handleToggleBotStatus = () => {
@@ -141,18 +148,59 @@ export default function Show({organization, users, bot}) {
                     {/* Users Section */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
                         <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900">
-                                    <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor"
-                                         viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                    </svg>
+                            <div className="flex items-center justify-between w-full">
+
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 shrink-0">
+                                        <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Пользователи</h2>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {users.meta?.total || users.data.length} всего
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Пользователи</h2>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{users.meta?.total || users.data.length} всего</p>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCreateInvitationModalOpen(true)}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                    >
+                                        {/* SVG иконка "Добавить пользователя" */}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="9" cy="7" r="4"></circle>
+                                            <line x1="19" y1="8" x2="19" y2="14"></line>
+                                            <line x1="22" y1="11" x2="16" y2="11"></line>
+                                        </svg>
+                                        <span>Пригласить</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCreateInvitationModalOpen(true)}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                    >
+                                        {/* SVG иконка "Добавить пользователя" */}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="9" cy="7" r="4"></circle>
+                                            <line x1="19" y1="8" x2="19" y2="14"></line>
+                                            <line x1="22" y1="11" x2="16" y2="11"></line>
+                                        </svg>
+                                    </button>
                                 </div>
+
+                                <Modal show={isCreateInvitationModalOpen} onClose={() => setIsCreateInvitationModalOpen(false)}>
+                                    <CreateInvitationForm
+                                        organizationId={organization.id}
+                                        onSuccess={handleInvitationCreated}
+                                    />
+                                </Modal>
                             </div>
                         </div>
 
