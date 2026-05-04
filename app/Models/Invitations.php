@@ -13,11 +13,14 @@ class Invitations extends Model
         'type',
         'status',
         'token',
-        'expires_at'
+        'limited',
+        'accepted_at',
+        'expires_at',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'accepted_at' => 'datetime',
     ];
 
     public function organization() {

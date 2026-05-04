@@ -1,17 +1,17 @@
 import { useForm } from '@inertiajs/react';
 
-export default function CreateInvitationForm({ onSuccess, organizationId}) {
+export default function CreateInvitationForm({ onSuccess, organizationId }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
-        type: 'student', // Значение по умолчанию (или 'teacher')
-        expires_at: '', // Можно оставить пустым, если на бэкенде есть дефолтное значение
+        type: 'student',
+        expires_at: '',
+        limited: true, // По умолчанию ссылка одноразовая (более безопасно)
         organization_id: organizationId,
     });
 
     const submit = (e) => {
         e.preventDefault();
 
-        // Отправляем на маршрут сохранения приглашения
         post(route('invitations.store'), {
             preserveState: true,
             preserveScroll: true,
@@ -20,6 +20,11 @@ export default function CreateInvitationForm({ onSuccess, organizationId}) {
                 onSuccess?.();
             },
         });
+    };
+
+    // Функция для переключения значения
+    const toggleLimited = () => {
+        setData('limited', !data.limited);
     };
 
     return (
@@ -58,9 +63,44 @@ export default function CreateInvitationForm({ onSuccess, organizationId}) {
                 >
                     <option value="student">Ученик</option>
                     <option value="teacher">Учитель</option>
-                    {/* Добавьте другие роли, если есть, например 'parent' */}
                 </select>
                 {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
+            </div>
+
+            {/* Переключатель: Одноразовая / Безлимитная */}
+            <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Тип ссылки
+                </label>
+                <div className="flex items-center bg-gray-100 dark:bg-gray-700 p-1 rounded-lg w-fit">
+                    <button
+                        type="button"
+                        onClick={() => setData('limited', true)}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            data.limited
+                                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-950'
+                        }`}
+                    >
+                        Одноразовая
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setData('limited', false)}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            !data.limited
+                                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-950'
+                        }`}
+                    >
+                        Безлимитная
+                    </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {data.limited
+                        ? 'Ссылка станет неактивной после первого использования.'
+                        : 'Ссылкой можно воспользоваться многократно.'}
+                </p>
             </div>
 
             {/* Срок действия (Опционально) */}

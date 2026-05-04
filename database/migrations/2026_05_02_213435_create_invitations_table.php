@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('type')->default('student');
             $table->string('status')->default('pending');
             $table->string('token')->unique();
+            $table->boolean('limited')->default(false);
+            $table->timestamp('accepted_at')->nullable();
             $table->timestamp('expires_at')->nullable();
 
             $table->timestamps();

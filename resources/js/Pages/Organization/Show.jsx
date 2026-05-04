@@ -6,11 +6,13 @@ import Modal from "@/Components/Modal.jsx";
 import CreateBotForm from "@/Pages/Bot/CreateBotForm.jsx";
 import Pagination from "@/Components/Pagination.jsx";
 import CreateInvitationForm from "@/Pages/Invitation/CreateInvitationForm.jsx";
+import InvitationsListModal from "@/Pages/Invitation/InvitationsListModal.jsx";
 
-export default function Show({organization, users, bot}) {
+export default function Show({organization, users, bot, invitations}) {
     const statusConfig = ORGANIZATION_STATUS[organization.status] || DEFAULT_STATUS;
     const [isCreateBotModalOpen, setIsCreateBotModalOpen] = useState(false);
     const [isCreateInvitationModalOpen, setIsCreateInvitationModalOpen] = useState(false);
+    const [IsInvitationListModalOpen, setIsInvitationListModalOpen] = useState(false);
     const [isToggling, setIsToggling] = useState(false);
 
     const handleBotCreated = () => {
@@ -20,7 +22,7 @@ export default function Show({organization, users, bot}) {
 
     const handleInvitationCreated = () => {
         setIsCreateInvitationModalOpen(false);
-        //router.reload({only: ['organization', 'invitation'], preserveScroll: true});
+        router.reload({only: ['organization', 'invitation'], preserveScroll: true});
     };
 
     const handleToggleBotStatus = () => {
@@ -39,6 +41,8 @@ export default function Show({organization, users, bot}) {
             }
         });
     };
+
+    console.log(invitations)
 
     const hasUserPages = users?.meta?.last_page > 1;
 
@@ -177,20 +181,19 @@ export default function Show({organization, users, bot}) {
                                             <line x1="19" y1="8" x2="19" y2="14"></line>
                                             <line x1="22" y1="11" x2="16" y2="11"></line>
                                         </svg>
-                                        <span>Пригласить</span>
                                     </button>
 
                                     <button
                                         type="button"
-                                        onClick={() => setIsCreateInvitationModalOpen(true)}
+                                        onClick={() => setIsInvitationListModalOpen(true)}
                                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                                     >
-                                        {/* SVG иконка "Добавить пользователя" */}
                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="9" cy="7" r="4"></circle>
-                                            <line x1="19" y1="8" x2="19" y2="14"></line>
-                                            <line x1="22" y1="11" x2="16" y2="11"></line>
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                                            <polyline points="10 9 9 9 8 9"></polyline>
                                         </svg>
                                     </button>
                                 </div>
@@ -201,6 +204,12 @@ export default function Show({organization, users, bot}) {
                                         onSuccess={handleInvitationCreated}
                                     />
                                 </Modal>
+
+                                <InvitationsListModal
+                                    isOpen={IsInvitationListModalOpen}
+                                    onClose={() => setIsInvitationListModalOpen(false)}
+                                    invitations={invitations.data}
+                                />
                             </div>
                         </div>
 

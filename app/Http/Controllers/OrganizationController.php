@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\OrganizationStatus;
 use App\Http\Requests\StoreOrganizationRequest;
 use App\Http\Resources\BotResource;
+use App\Http\Resources\InvitationResource;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\UserResource;
 use App\Models\Organization;
@@ -55,12 +56,13 @@ class OrganizationController extends Controller
             ->withQueryString();
 
         $bot = $organization->bot;
-
+        $invitations = $organization->invitations;
 
         return Inertia::render('Organization/Show', [
             'organization' => new OrganizationResource($organization),
             'users' => UserResource::collection($users),
             'bot' => $bot ? new BotResource($bot) : null,
+            'invitations' => InvitationResource::collection($invitations),
         ]);
     }
 

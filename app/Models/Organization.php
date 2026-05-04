@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 class Organization extends Model implements HasTenants
@@ -42,6 +43,10 @@ class Organization extends Model implements HasTenants
 
     public function bot(){
         return $this->hasOne(Bot::class);
+    }
+
+    public function invitations(): HasMany{
+        return $this->hasMany(Invitations::class);
     }
 
     /**

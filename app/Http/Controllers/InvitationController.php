@@ -36,6 +36,7 @@ class InvitationController extends Controller
             'email' => 'required|email',
             'type' => 'required|in:student,teacher', // Добавьте свои правила
             'expires_at' => 'nullable|date|after:today',
+            'limited' => 'boolean',
         ]);
 
         if (empty($validated['expires_at'])) {
@@ -50,6 +51,7 @@ class InvitationController extends Controller
             'status' => 'pending',
             'token' => Str::random(16),
             'expires_at' => $validated['expires_at'],
+            'limited' => $validated['limited']
         ]);
 
         return back()->with('success', 'Приглашение создано успешно.');
