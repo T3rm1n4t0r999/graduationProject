@@ -20,6 +20,7 @@ class BotResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'bot_url' => $this->bot_url,
             'is_active' => $this->is_active,
         ];
     }

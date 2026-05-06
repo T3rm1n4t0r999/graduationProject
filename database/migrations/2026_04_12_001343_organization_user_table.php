@@ -12,11 +12,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->string('role')->default('member');
+            $table->string('role')->default('teacher');
             $table->timestamp('invited_at')->nullable();
             $table->timestamp('joined_at')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
             $table->unique(['user_id', 'organization_id']);
             $table->index('role');
         });

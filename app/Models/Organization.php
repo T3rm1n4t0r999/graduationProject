@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\OrganizationRole;
 use App\Enums\OrganizationStatus;
-use Filament\Models\Contracts\HasTenants;
-use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
-class Organization extends Model implements HasTenants
+class Organization extends Model
 {
     use HasFactory;
     protected $fillable = [
@@ -22,6 +21,8 @@ class Organization extends Model implements HasTenants
         'status',
         'settings',
         'plan',
+        'email_verified_at',
+        'email_verification_token',
     ];
 
     protected $casts = [
@@ -29,6 +30,26 @@ class Organization extends Model implements HasTenants
         'settings' => 'array',
     ];
 
+    protected $hidden = [
+        'email_verification_token',
+    ];
+
+    public function userIsManagerOrOwner(User $user): bool
+    {
+        return $this->userHasRole($user, [
+            OrganizationRole::Manager->value,
+            OrganizationRole::Owner->value
+        ]);
+    }
+
+    public function userHasRole(User $user, array $roles): bool
+    {
+        return $this->users()
+            ->where('users.id', $user->id)
+            ->wherePivot('is_active', true)
+            ->wherePivotIn('role', $roles)
+            ->exists();
+    }
 
     public function users(): belongsToMany {
         return $this->belongsToMany(User::class, 'organization_user')
@@ -46,59 +67,48 @@ class Organization extends Model implements HasTenants
     }
 
     public function invitations(): HasMany{
-        return $this->hasMany(Invitations::class);
+        return $this->hasMany(Invitation::class);
     }
 
     /**
      * Get the tenants that the user can access.
      */
-    public function getTenantsForUser(Model $user): Collection
-    {
-        if (!$user instanceof User) {
-            return collect();
-        }
 
-        return $user->organizations()
-            ->whereIn('organization_user.role', ['owner', 'member'])
-            ->wherePivot('is_active', true)
-            ->get();
+    public function isVerified(): bool
+    {
+        return $this->status->isVerified();
     }
 
-    public function canAccessTenant(Model $tenant): bool
+    public function isPendingVerification(): bool
     {
-        if (!$tenant instanceof Organization) {
+        return $this->status->isPending();
+    }
+
+    public function generateEmailVerificationToken(): string
+    {
+        $this->email_verification_token = hash_hmac('sha256', Str::random(40), config('app.key'));
+        $this->save();
+        return $this->email_verification_token;
+    }
+
+    public function markEmailAsVerified(): bool
+    {
+        if ($this->isVerified()) {
             return false;
         }
 
-        // Проверяем, есть ли у текущего пользователя доступ к этой организации
-        // $this в данном контексте - это пользователь (User), так как метод вызывается на экземпляре User
-        // Но так как этот метод определен в модели Organization, нам нужно получить текущего пользователя из auth
-        $user = auth()->user();
+        $this->forceFill([
+            'status' => OrganizationStatus::Active,
+            'email_verified_at' => now(),
+            'email_verification_token' => null,
+        ])->save();
 
-        if (!$user instanceof User) {
-            return false;
-        }
-
-        return $user->organizations()
-            ->where('organizations.id', $tenant->id)
-            ->whereIn('organization_user.role', ['owner', 'member'])
-            ->wherePivot('is_active', true)
-            ->exists();
+        return true;
     }
 
-    public function getTenants(Panel $panel): array|Collection
+    public function scopeVerified($query)
     {
-        $user = auth()->user();
-
-        if (!$user instanceof User) {
-            return collect();
-        }
-
-        return $user->organizations()
-            ->whereIn('organization_user.role', ['owner', 'member'])
-            ->wherePivot('is_active', true)
-            ->get();
+        return $query->where('status', OrganizationStatus::Active);
     }
-
 
 }

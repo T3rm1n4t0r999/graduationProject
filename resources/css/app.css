@@ -1,3 +1,143 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* ========== Основные цвета ========== */
+        --color-primary: #6366F1;          /* Основной акцент (кнопки, ссылки, бейджи) */
+        --color-primary-hover: #4F46E5;    /* Акцент при наведении */
+        --color-primary-light: #EEF2FF;    /* Светлый фон для акцентных блоков */
+
+        /* ========== Фоны ========== */
+        --color-bg: #F8FAFC;               /* Фон страницы */
+        --color-bg-card: rgba(255, 255, 255, 0.7);  /* Фон карточек (стеклянный эффект) */
+        --color-bg-card-hover: rgba(255, 255, 255, 0.9);
+
+        /* ========== Текст ========== */
+        --color-text-primary: #1E293B;     /* Основной текст */
+        --color-text-secondary: #64748B;   /* Вторичный текст */
+        --color-text-muted: #94A3B8;       /* Приглушённый текст */
+
+        /* ========== Границы и разделители ========== */
+        --color-border: rgba(226, 232, 240, 0.8);  /* Границы карточек, инпутов */
+        --color-border-light: rgba(241, 245, 249, 0.9);
+
+        /* ========== Статусные цвета ========== */
+        --color-success: #10B981;
+        --color-warning: #F59E0B;
+        --color-error: #EF4444;
+
+        /* ========== Шапка и навигация ========== */
+        --color-header-bg: rgba(255, 255, 255, 0.6);
+    }
+
+    .dark {
+        /* ========== Основные цвета ========== */
+        --color-primary: #818CF8;          /* Более яркий акцент для тёмной темы */
+        --color-primary-hover: #6366F1;
+        --color-primary-light: rgba(99, 102, 241, 0.15);
+
+        /* ========== Фоны ========== */
+        --color-bg: #0F172A;               /* Глубокий тёмный фон */
+        --color-bg-card: rgba(30, 41, 59, 0.7);  /* Стеклянная карточка на тёмном */
+        --color-bg-card-hover: rgba(30, 41, 59, 0.9);
+
+        /* ========== Текст ========== */
+        --color-text-primary: #F1F5F9;
+        --color-text-secondary: #94A3B8;
+        --color-text-muted: #64748B;
+
+        /* ========== Границы ========== */
+        --color-border: rgba(51, 65, 85, 0.6);
+        --color-border-light: rgba(51, 65, 85, 0.3);
+
+        /* ========== Шапка ========== */
+        --color-header-bg: rgba(15, 23, 42, 0.6);
+    }
+}
+
+@layer components {
+    /* Карточка со стеклянным эффектом */
+    .glass-card {
+        @apply rounded-2xl border shadow-sm;
+        background: var(--color-bg-card);
+        border-color: var(--color-border);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    .glass-card:hover {
+        background: var(--color-bg-card-hover);
+    }
+
+    /* Шапка со стеклянным эффектом */
+    .glass-header {
+        background: var(--color-header-bg);
+        border-bottom: 1px solid var(--color-border);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+    .dropdown-glass {
+        @apply z-50 rounded-xl border shadow-xl;
+        background: var(--color-bg-card);
+        border-color: var(--color-border);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+    /* Кнопка "primary" */
+    .btn-primary {
+        @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-xl
+        transition-all duration-200 shadow-sm;
+        background: var(--color-primary);
+        color: white;
+    }
+    .btn-primary:hover {
+        background: var(--color-primary-hover);
+        @apply shadow-md;
+    }
+
+    /* Кнопка "ghost" (прозрачная) */
+    .btn-ghost {
+        @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-xl
+        transition-all duration-200;
+        color: var(--color-text-secondary);
+    }
+    .btn-ghost:hover {
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+    }
+
+    /* Текстовые стили */
+    .text-main {
+        color: var(--color-text-primary);
+    }
+    .text-meta {
+        color: var(--color-text-secondary);
+    }
+    .text-label {
+        color: var(--color-text-muted);
+    }
+
+    /* Инпуты */
+    .form-input-glass {
+        @apply w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-200;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-primary);
+    }
+    .form-input-glass:focus {
+        @apply outline-none ring-2 ring-offset-0;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+
+    /* Бейдж (статус) */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full;
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+    }
+}

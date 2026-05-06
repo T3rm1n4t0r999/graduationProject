@@ -34,9 +34,15 @@ class BotController extends Controller
      */
     public function store(Request $request)
     {
-        //сделать: создать может только владелец
+        $organization = Organization::where('id', $request->get('organization_id'))->first();
+
+        if (!$organization->isVerified()){
+            return back()->with('error', 'Подтвердите организацию для создания бота.');
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'bot_url' => 'required|string|max:100',
             'token' => 'required|string|max:500',
             'organization_id' => 'required|exists:organizations,id',
         ]);
@@ -75,14 +81,15 @@ class BotController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'token' => 'nullable|string|max:500',
+            'bot_url' => 'nullable|string|max:100',
         ]);
 
-        // Обновляем токен только если он был передан
         if (!empty($data['token'])) {
             $bot->token = $data['token'];
         }
 
         $bot->name = $data['name'];
+        $bot->bot_url = $data['bot_url'];
         $bot->save();
 
         return redirect()->route('organization.show', $bot->organization->id)

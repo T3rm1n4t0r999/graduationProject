@@ -28,4 +28,14 @@ enum OrganizationStatus: string
             self::PendingVerification => 'yellow',
         };
     }
+
+    public function isVerified(): bool
+    {
+        return $this !== self::PendingVerification;
+    }
+
+    public function isPending(): bool
+    {
+        return $this === self::PendingVerification;
+    }
 }

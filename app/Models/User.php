@@ -3,10 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\OrganizationRole;
 use App\Enums\UserStatus;
+use App\Notifications\CustomVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,9 +21,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements HasTenants
+class User extends Authenticatable implements HasTenants, FilamentUser, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -58,13 +60,12 @@ class User extends Authenticatable implements HasTenants
                     ->withTimestamps();
     }
 
-    public function getOrganizationById(int $organizationId)
+    public function getTenants(Panel $panel): Collection
     {
         return $this->organizations()
-            ->where('organizations.id', $organizationId)
-            ->whereIn('organization_user.role', ['owner', 'member'])
             ->wherePivot('is_active', true)
-            ->first();
+            ->wherePivotIn('role', [OrganizationRole::Manager,OrganizationRole::Owner, OrganizationRole::Teacher]) // 👈 добавлены нужные роли
+            ->get();
     }
 
     public function canAccessTenant(Model $tenant): bool
@@ -75,16 +76,18 @@ class User extends Authenticatable implements HasTenants
 
         return $this->organizations()
             ->where('organizations.id', $tenant->id)
-            ->whereIn('organization_user.role', ['owner', 'member'])
             ->wherePivot('is_active', true)
+            ->wherePivotIn('role', [OrganizationRole::Manager,OrganizationRole::Owner, OrganizationRole::Teacher])
             ->exists();
     }
 
-    public function getTenants(Panel $panel): Collection
+    public function canAccessPanel(Panel $panel): bool
     {
-        return $this->organizations()
-            ->whereIn('organization_user.role', ['owner', 'member'])
-            ->wherePivot('is_active', true)
-            ->get();
+        return $this->getTenants($panel)->isNotEmpty();
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new CustomVerifyEmail);
     }
 }

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('bots', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('bot_url');
             $table->text('token')->unique();
             $table->boolean('is_active')->default('false');
             $table->foreignId('organization_id')->unique()->constrained()->onDelete('cascade');

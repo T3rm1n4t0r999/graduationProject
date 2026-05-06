@@ -1,18 +1,21 @@
-import { useForm } from '@inertiajs/react';
+// resources/js/Pages/Invitation/CreateInvitationForm.jsx
+import { useForm, usePage } from '@inertiajs/react';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
-export default function CreateInvitationForm({ onSuccess, organizationId }) {
+export default function CreateInvitationForm({ isOpen, onClose, onSuccess, organizationId }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         type: 'student',
         expires_at: '',
-        limited: true, // По умолчанию ссылка одноразовая (более безопасно)
+        limited: true,
         organization_id: organizationId,
     });
+    const { bot } = usePage().props;
 
     const submit = (e) => {
         e.preventDefault();
-
-        post(route('invitations.store'), {
+        post(route('invitation.store'), {
             preserveState: true,
             preserveScroll: true,
             onSuccess: () => {
@@ -22,133 +25,150 @@ export default function CreateInvitationForm({ onSuccess, organizationId }) {
         });
     };
 
-    // Функция для переключения значения
-    const toggleLimited = () => {
-        setData('limited', !data.limited);
+    const handleClose = () => {
+        if (!processing) onClose();
     };
 
     return (
-        <form onSubmit={submit} className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4 dark:text-white">
-                Отправить приглашение
-            </h2>
-
-            {/* Email пользователя */}
-            <div className="mb-4">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email получателя *
-                </label>
-                <input
-                    id="email"
-                    type="email"
-                    autoFocus
-                    value={data.email}
-                    onChange={(e) => setData('email', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    placeholder="user@example.com"
-                />
-                {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-            </div>
-
-            {/* Тип пользователя (Роль) */}
-            <div className="mb-4">
-                <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Роль *
-                </label>
-                <select
-                    id="type"
-                    value={data.type}
-                    onChange={(e) => setData('type', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+        <Transition appear show={isOpen} as={Fragment}>
+            <Dialog as="div" className="relative z-50" onClose={handleClose}>
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0"
+                    enterTo="opacity-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
                 >
-                    <option value="student">Ученик</option>
-                    <option value="teacher">Учитель</option>
-                </select>
-                {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
-            </div>
+                    <div className="fixed inset-0 bg-black bg-opacity-25 backdrop-blur-sm" />
+                </Transition.Child>
 
-            {/* Переключатель: Одноразовая / Безлимитная */}
-            <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Тип ссылки
-                </label>
-                <div className="flex items-center bg-gray-100 dark:bg-gray-700 p-1 rounded-lg w-fit">
-                    <button
-                        type="button"
-                        onClick={() => setData('limited', true)}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                            data.limited
-                                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-950'
-                        }`}
-                    >
-                        Одноразовая
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setData('limited', false)}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                            !data.limited
-                                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-950'
-                        }`}
-                    >
-                        Безлимитная
-                    </button>
+                <div className="fixed inset-0 overflow-y-auto">
+                    <div className="flex min-h-full items-center justify-center p-4 text-center">
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95"
+                        >
+                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl glass-card p-6 text-left align-middle shadow-xl transition-all relative z-10">
+                                <Dialog.Title as="h3" className="text-lg font-medium text-main mb-4">
+                                    Отправить приглашение
+                                </Dialog.Title>
+
+                                <form onSubmit={submit}>
+                                    {/* Email */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-main">Email получателя *</label>
+                                        <input
+                                            type="email"
+                                            autoFocus
+                                            value={data.email}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            className="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-main shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            placeholder="user@example.com"
+                                        />
+                                        {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                                    </div>
+
+                                    {/* Роль */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-main">Роль *</label>
+                                        <select
+                                            value={data.type}
+                                            onChange={(e) => setData('type', e.target.value)}
+                                            className="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-main shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        >
+                                            {bot && <option value="student">Ученик</option>}
+                                            <option value="teacher">Учитель</option>
+                                            <option value="manager">Менеджер</option>
+                                        </select>
+                                        {errors.type && <p className="mt-1 text-sm text-red-500">{errors.type}</p>}
+                                    </div>
+
+                                    {/* Тип ссылки */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-main mb-2">Тип ссылки</label>
+                                        <div className="flex items-center p-1 rounded-lg" style={{ background: 'var(--color-border-light)' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('limited', true)}
+                                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                                    data.limited
+                                                        ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                                        : 'text-meta hover:text-main'
+                                                }`}
+                                            >
+                                                Одноразовая
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('limited', false)}
+                                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                                    !data.limited
+                                                        ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                                        : 'text-meta hover:text-main'
+                                                }`}
+                                            >
+                                                Безлимитная
+                                            </button>
+                                        </div>
+                                        <p className="mt-1 text-xs text-meta">
+                                            {data.limited
+                                                ? 'Ссылка станет неактивной после первого использования.'
+                                                : 'Ссылкой можно воспользоваться многократно.'}
+                                        </p>
+                                    </div>
+
+                                    {/* Срок действия */}
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-main">Срок действия ссылки</label>
+                                        <input
+                                            type="date"
+                                            value={data.expires_at}
+                                            onChange={(e) => setData('expires_at', e.target.value)}
+                                            className="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-main shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <p className="mt-1 text-xs text-meta">
+                                            Оставьте пустым для стандартного срока (7 дней).
+                                        </p>
+                                        {errors.expires_at && <p className="mt-1 text-sm text-red-500">{errors.expires_at}</p>}
+                                    </div>
+
+                                    {/* Кнопки */}
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleClose}
+                                            className="btn-ghost"
+                                            disabled={processing}
+                                        >
+                                            Отмена
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={processing}
+                                            className="btn-primary flex items-center gap-2"
+                                        >
+                                            {processing ? (
+                                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                </svg>
+                                            ) : null}
+                                            {processing ? 'Отправка...' : 'Пригласить'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </Dialog.Panel>
+                        </Transition.Child>
+                    </div>
                 </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {data.limited
-                        ? 'Ссылка станет неактивной после первого использования.'
-                        : 'Ссылкой можно воспользоваться многократно.'}
-                </p>
-            </div>
-
-            {/* Срок действия (Опционально) */}
-            <div className="mb-6">
-                <label htmlFor="expires_at" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Срок действия ссылки
-                </label>
-                <input
-                    id="expires_at"
-                    type="date"
-                    value={data.expires_at}
-                    onChange={(e) => setData('expires_at', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Оставьте пустым, чтобы использовать стандартный срок (например, 7 дней).
-                </p>
-                {errors.expires_at && <p className="mt-1 text-sm text-red-600">{errors.expires_at}</p>}
-            </div>
-
-            {/* Кнопки действий */}
-            <div className="flex justify-end gap-3">
-                <button
-                    type="button"
-                    onClick={() => onSuccess?.()}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-200 transition-colors"
-                    disabled={processing}
-                >
-                    Отмена
-                </button>
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2"
-                >
-                    {processing ? (
-                        <>
-                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Отправка...
-                        </>
-                    ) : (
-                        'Пригласить'
-                    )}
-                </button>
-            </div>
-        </form>
+            </Dialog>
+        </Transition>
     );
 }

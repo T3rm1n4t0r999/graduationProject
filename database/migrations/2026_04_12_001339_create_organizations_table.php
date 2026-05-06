@@ -20,7 +20,11 @@ return new class extends Migration
             $table->string('status')->default(OrganizationStatus::PendingVerification->value);
             $table->json('settings')->nullable();
             $table->string('plan')->nullable();
+            $table->string('email_verification_token')->nullable()->after('email');
+            $table->timestamp('email_verified_at')->nullable()->after('email_verification_token');
             $table->timestamps();
+
+            $table->index('email_verification_token');
         });
     }
 

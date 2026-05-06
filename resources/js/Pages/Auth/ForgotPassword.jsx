@@ -1,6 +1,3 @@
-import InputError from '@/Components/InputError';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
@@ -11,19 +8,16 @@ export default function ForgotPassword({ status }) {
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('password.email'));
     };
 
     return (
         <GuestLayout>
-            <Head title="Forgot Password" />
+            <Head title="Восстановление пароля" />
 
-            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Forgot your password? No problem. Just let us know your email
-                address and we will email you a password reset link that will
-                allow you to choose a new one.
-            </div>
+            <p className="mb-4 text-sm text-meta">
+                Забыли пароль? Укажите ваш email, и мы отправим ссылку для сброса пароля.
+            </p>
 
             {status && (
                 <div className="mb-4 text-sm font-medium text-green-600 dark:text-green-400">
@@ -32,22 +26,23 @@ export default function ForgotPassword({ status }) {
             )}
 
             <form onSubmit={submit}>
-                <TextInput
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={data.email}
-                    className="mt-1 block w-full"
-                    isFocused={true}
-                    onChange={(e) => setData('email', e.target.value)}
-                />
+                <div>
+                    <label className="block text-sm font-medium text-main">Email</label>
+                    <input
+                        type="email"
+                        autoFocus
+                        value={data.email}
+                        onChange={(e) => setData('email', e.target.value)}
+                        className="form-input-glass mt-1"
+                        required
+                    />
+                    {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                </div>
 
-                <InputError message={errors.email} className="mt-2" />
-
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Email Password Reset Link
-                    </PrimaryButton>
+                <div className="mt-6 flex justify-end">
+                    <button type="submit" disabled={processing} className="btn-primary">
+                        {processing ? 'Отправка...' : 'Отправить ссылку'}
+                    </button>
                 </div>
             </form>
         </GuestLayout>

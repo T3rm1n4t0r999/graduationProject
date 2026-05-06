@@ -1,7 +1,3 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
@@ -12,42 +8,35 @@ export default function ConfirmPassword() {
 
     const submit = (e) => {
         e.preventDefault();
-
-        post(route('password.confirm'), {
-            onFinish: () => reset('password'),
-        });
+        post(route('password.confirm'), { onFinish: () => reset('password') });
     };
 
     return (
         <GuestLayout>
-            <Head title="Confirm Password" />
+            <Head title="Подтверждение пароля" />
 
-            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                This is a secure area of the application. Please confirm your
-                password before continuing.
-            </div>
+            <p className="mb-4 text-sm text-meta">
+                Это защищённая область приложения. Пожалуйста, подтвердите ваш пароль для продолжения.
+            </p>
 
             <form onSubmit={submit}>
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
+                <div>
+                    <label className="block text-sm font-medium text-main">Пароль</label>
+                    <input
                         type="password"
-                        name="password"
+                        autoFocus
                         value={data.password}
-                        className="mt-1 block w-full"
-                        isFocused={true}
                         onChange={(e) => setData('password', e.target.value)}
+                        className="form-input-glass mt-1"
+                        required
                     />
-
-                    <InputError message={errors.password} className="mt-2" />
+                    {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Confirm
-                    </PrimaryButton>
+                <div className="mt-6 flex justify-end">
+                    <button type="submit" disabled={processing} className="btn-primary">
+                        {processing ? 'Подтверждение...' : 'Подтвердить'}
+                    </button>
                 </div>
             </form>
         </GuestLayout>

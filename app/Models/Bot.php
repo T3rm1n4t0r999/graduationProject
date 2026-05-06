@@ -12,6 +12,7 @@ class Bot extends Model
     protected $table = 'bots';
     protected $fillable = [
         'name',
+        'bot_url',
         'token',
         'is_active',
         'organization_id'

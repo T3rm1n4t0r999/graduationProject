@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 export default function ErrorPage({ status }) {
     const title = {
@@ -7,19 +7,19 @@ export default function ErrorPage({ status }) {
         500: 'Ошибка сервера',
         404: 'Страница не найдена',
         403: 'Доступ запрещен',
-    }[status];
+    }[status] || `Ошибка ${status}`;
 
     const description = {
         503: 'Извините, мы проводим технические работы. Пожалуйста, зайдите позже.',
         500: 'Что-то пошло не так на наших серверах.',
         404: 'Извините, страница, которую вы ищете, не существует.',
         403: 'У вас нет прав для просмотра этой страницы.',
-    }[status];
+    }[status] || 'Произошла непредвиденная ошибка.';
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-xl font-semibold text-main">
                     {title}
                 </h2>
             }
@@ -27,25 +27,28 @@ export default function ErrorPage({ status }) {
             <Head title={title} />
 
             <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <div className="p-6 text-gray-900 dark:text-gray-100">
-                            <div className="flex flex-col items-center justify-center py-10">
-                                <h1 className="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">
-                                    {status}
-                                </h1>
-                                <h2 className="text-2xl font-semibold mb-2">{title}</h2>
-                                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-                                    {description}
-                                </p>
-
-                                <a
-                                    href="/dashboard"
-                                    className="mt-8 inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                                >
-                                    Вернуться на главную
-                                </a>
+                <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+                    <div className="glass-card p-8 text-center">
+                        <div className="flex flex-col items-center">
+                            <div
+                                className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+                                style={{ background: 'var(--color-primary-light)' }}
+                            >
+                                <svg className="w-10 h-10" style={{ color: 'var(--color-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
                             </div>
+
+                            <h1 className="text-5xl font-bold text-main mb-4">{status}</h1>
+                            <h2 className="text-2xl font-semibold text-main mb-3">{title}</h2>
+                            <p className="text-meta max-w-md mb-8">{description}</p>
+
+                            <Link
+                                href={route('dashboard')}
+                                className="btn-primary"
+                            >
+                                Вернуться на главную
+                            </Link>
                         </div>
                     </div>
                 </div>

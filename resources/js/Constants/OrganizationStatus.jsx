@@ -1,18 +1,18 @@
 export const ORGANIZATION_STATUS = {
     active: {
-        label: 'Активна',
-        className: 'bg-green-500 text-white',
+        label: 'Подтверждена',
+        className: 'bg-green-900 text-white',
     },
     trial: {
         label: 'Пробный период',
-        className: 'bg-blue-500 text-white',
+        className: 'bg-blue-900 text-white',
     },
     suspended: {
         label: 'Приостановлена',
-        className: 'bg-red-500 text-white',
+        className: 'bg-red-900 text-white',
     },
     pending_verification: {
-        label: 'На проверке',
+        label: 'Требует подтверждения',
         className: 'bg-yellow-500 text-black',
     },
 };
