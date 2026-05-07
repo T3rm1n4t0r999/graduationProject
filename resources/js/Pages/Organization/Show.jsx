@@ -107,7 +107,7 @@ export default function Show({ organization, users, bot, invitations, isVerified
                         </div>
 
                         <div className="flex gap-3">
-                            <Link
+                            <a
                                 href={isVerified ? route('organization.admin', {organization: organization.id}) : '#'}
                                 onClick={(e) => !isVerified && e.preventDefault()}
                                 disabled={!isVerified}
@@ -115,7 +115,7 @@ export default function Show({ organization, users, bot, invitations, isVerified
                                 title={!isVerified ? restrictionMessage : ''}
                             >
                                 Контент
-                            </Link>
+                            </a>
 
                             {can?.manage && (bot ? (
                                 <button

@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Enums\OrganizationRole;
 use App\Models\Invitation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -27,7 +28,7 @@ class InvitationMail extends Mailable
 
     public function content(): Content
     {
-        if ($this->invitation->type === 'student') {
+        if ($this->invitation->type === OrganizationRole::Student) {
             $bot = $this->invitation->organization->bot;
 
             return new Content(

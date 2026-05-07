@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
-use Illuminate\Http\Client\Request;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class DashboardController
@@ -15,28 +15,29 @@ class DashboardController
 
         // Организации пользователя
         $organizations = $user->organizations()
-            ->with(['bot', 'users' => function ($q) {
-                $q->select('id'); // только для подсчёта
-            }])
+            ->with(['bot'])
+            ->withCount('users')
             ->withPivot('role')
             ->get();
-        $students = Student::where('organization_id', $user->$organizations->first()->id)->get();
-        // Статистика (только если есть доступ)
+
+        // Статистика для первой организации (если есть доступ)
         $stats = null;
         if ($organizations->isNotEmpty()) {
             $org = $organizations->first();
+            $students = Student::where('organization_id', $org->id)->get();
+
             $stats = [
-                'totalStudents' => $students->count(),
-                'activeBots' => $org->bot?->is_active ? 1 : 0,
-                'completedLessons' => 42, // 🔹 заменить на реальный запрос
-                'averageProgress' => 68,  // 🔹 заменить на реальный запрос
-                'studentsGrowth' => 12,   // 🔹 заменить на реальный запрос
+                'totalStudents'    => $students->count(),
+                'activeBots'       => $org->bot?->is_active ? 1 : 0,
+                'completedLessons' => 42, // замените на реальный запрос
+                'averageProgress'  => 68, // замените на реальный запрос
+                'studentsGrowth'   => 12, // замените на реальный запрос
             ];
         }
 
         return Inertia::render('Dashboard', [
             'organizations' => $organizations,
-            'stats' => $stats,
+            'stats'         => $stats,
         ]);
     }
 

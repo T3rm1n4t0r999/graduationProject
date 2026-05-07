@@ -15,7 +15,7 @@ class BotPolicy
         if (!$organization->isVerified()){
             return false;
         }
-        return $user->id === $organization->owner->id;
+        return $organization->userIsManagerOrOwner($user);
     }
     public function edit(User $user, Bot $bot): bool
     {
@@ -23,7 +23,7 @@ class BotPolicy
         if (!$organization->isVerified()){
             return false;
         }
-        return $user->id === $organization->owner->id;
+        return $organization->userIsManagerOrOwner($user);
     }
     public function update(User $user, Bot $bot): bool
     {
@@ -31,6 +31,6 @@ class BotPolicy
         if (!$organization->isVerified()){
             return false;
         }
-        return $user->id === $organization->owner->id;
+        return $organization->userIsManagerOrOwner($user);
     }
 }

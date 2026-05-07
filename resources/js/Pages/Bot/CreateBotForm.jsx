@@ -5,6 +5,8 @@ import { Fragment } from 'react';
 export default function CreateBotForm({ isOpen, onClose, onSuccess, organizationId }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
+        token: '',
+        bot_url: '',
         organization_id: organizationId,
     });
 
@@ -50,7 +52,7 @@ export default function CreateBotForm({ isOpen, onClose, onSuccess, organization
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl border border-gray-200 dark:border-gray-700 transition-all">
+                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl glass-card p-6 text-left align-middle shadow-xl transition-all relative z-10">
                                 <Dialog.Title as="h3" className="text-lg font-medium text-main mb-4">
                                     Создать бота
                                 </Dialog.Title>
@@ -68,6 +70,31 @@ export default function CreateBotForm({ isOpen, onClose, onSuccess, organization
                                         />
                                         {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
                                     </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-main">Юзернейм бота *</label>
+                                        <input
+                                            type="text"
+                                            value={data.bot_url}
+                                            onChange={(e) => setData('bot_url', e.target.value)}
+                                            className="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-main shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            placeholder="@МойБот"
+                                        />
+                                        {errors.bot_url && <p className="mt-1 text-sm text-red-500">{errors.bot_url}</p>}
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Токен
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.token}
+                                            onChange={(e) => setData('token', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                            placeholder="Можно получить у @BotFather"
+                                        />
+                                        {errors.token && <p className="mt-1 text-sm text-red-600">{errors.token}</p>}
+                                    </div>
+
 
                                     <div className="flex justify-end gap-3">
                                         <button
