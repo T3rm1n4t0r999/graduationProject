@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Super Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
 
 //        $users = User::factory()->count(10)->create();

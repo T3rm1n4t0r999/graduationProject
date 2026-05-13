@@ -13,17 +13,18 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->integer('max_score')->default(0);
-            $table->foreignId('task_id')
-                ->constrained('lesson_task')
+            $table->foreignId('lesson_id')
+                ->constrained('lessons')
                 ->cascadeOnDelete();
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
 
             // Индексы
             $table->index('organization_id');
-            $table->index('task_id');
+            $table->index('lesson_id');
         });
     }
 

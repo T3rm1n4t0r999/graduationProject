@@ -18,6 +18,8 @@ class LessonTask extends Model
         'description',
         'max_score',
         'lesson_id',
+        'order',
+        'is_active',
         'organization_id'
     ];
 

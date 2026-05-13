@@ -16,6 +16,8 @@ class Module extends Model
         'description',
         'course_id',
         'organization_id',
+        'order',
+        'is_active',
     ];
 
     public function organization(): BelongsTo{
@@ -32,5 +34,23 @@ class Module extends Model
 
     public function lessons(): HasMany{
         return $this->hasMany(Lesson::class);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (Module $module) {
+            if (empty($module->order)) {
+                $module->order = static::where('course_id', $module->course_id)
+                        ->max('order') + 1;
+            }
+        });
+
+        static::deleted(function (Module $module) {
+            Module::where('course_id', $module->course_id)
+                ->where('order', '>', $module->order)
+                ->decrement('order');
+        });
     }
 }

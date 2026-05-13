@@ -1,12 +1,14 @@
 // resources/js/Pages/Organization/CreateOrganizationForm.jsx
-import { useForm } from '@inertiajs/react';
+import {useForm, usePage} from '@inertiajs/react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
 export default function CreateOrganizationForm({ isOpen, onClose, onSuccess }) {
+    const { auth } = usePage().props;
+
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
-        email: '',
+        email: auth.user.email,
     });
 
     const submit = (e) => {
@@ -73,7 +75,7 @@ export default function CreateOrganizationForm({ isOpen, onClose, onSuccess }) {
 
                                     {/* Email */}
                                     <div className="mb-6">
-                                        <label className="block text-sm font-medium text-main">Контактный email</label>
+                                        <label className="block text-sm font-medium text-main">Контактный email *</label>
                                         <input
                                             type="email"
                                             value={data.email}

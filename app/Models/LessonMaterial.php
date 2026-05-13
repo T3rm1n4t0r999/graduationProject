@@ -17,7 +17,8 @@ class LessonMaterial extends Model
         'order',
         'material_type',
         'lesson_id',
-        'organization_id'
+        'organization_id',
+        'is_active',
     ];
 
     public function organization(): BelongsTo{
@@ -41,5 +42,23 @@ class LessonMaterial extends Model
     public function getMorphClass(): string
     {
         return 'LessonMaterial';
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (LessonMaterial $material) {
+            if (empty($material->order)) {
+                $material->order = static::where('lesson_id', $material->lesson_id)
+                        ->max('order') + 1;
+            }
+        });
+
+        static::deleted(function (LessonMaterial $material) {
+            LessonMaterial::where('lesson_id', $material->lesson_id)
+                ->where('order', '>', $material->order)
+                ->decrement('order');
+        });
     }
 }

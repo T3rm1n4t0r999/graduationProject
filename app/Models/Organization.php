@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Str;
 
 class Organization extends Model
@@ -69,6 +70,32 @@ class Organization extends Model
     public function invitations(): HasMany{
         return $this->hasMany(Invitation::class);
     }
+
+    public function courses(): HasMany{
+        return $this->hasMany(Course::class);
+    }
+
+    public function modules(): HasMany{
+        return $this->hasMany(Module::class);
+    }
+
+    public function lessons(): HasMany{
+        return $this->hasMany(Lesson::class);
+    }
+
+    public function lessonTasks(): HasMany{
+        return $this->hasMany(LessonTask::class);
+    }
+
+    public function questions(): HasMany{
+        return $this->hasMany(Question::class);
+    }
+
+    public function homeworks(): HasMany{
+        return $this->hasMany(Homework::class);
+    }
+
+
 
     /**
      * Get the tenants that the user can access.

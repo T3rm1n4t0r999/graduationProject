@@ -47,6 +47,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
+        $request->session()->forget('current_organization_id');
+
         return redirect('/');
     }
 }

@@ -15,7 +15,9 @@ class Course extends Model
     protected $fillable = [
         'title',
         'description',
-        'organization_id'
+        'organization_id',
+        'order',
+        'is_active',
     ];
 
     public function modules(): HasMany{
@@ -24,5 +26,23 @@ class Course extends Model
 
     public function organization(): BelongsTo{
         return $this->belongsTo(Organization::class);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (Course $course) {
+            if (empty($course->order)) {
+                $course->order = static::where('organization_id', $course->organization_id)
+                        ->max('order') + 1;
+            }
+        });
+
+        static::deleted(function (Course $course) {
+            Course::where('organization_id', $course->organization_id)
+                ->where('order', '>', $course->order)
+                ->decrement('order');
+        });
     }
 }

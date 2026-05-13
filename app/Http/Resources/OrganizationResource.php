@@ -22,11 +22,8 @@ class OrganizationResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email'=> $this->email,
-            'slug' => $this->slug ?? null,
             'status' => $this->status,
-            'plan' => $this->plan,
             'owner_id' => $this->owner_id,
-            'settings' => $this->settings,
         ];
     }
 }

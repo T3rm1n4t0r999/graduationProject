@@ -23,6 +23,7 @@ class Question extends Model
         'questionable_type',
         'metadata',
         'explanation',
+        'is_active',
     ];
 
     protected $casts = [

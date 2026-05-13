@@ -8,11 +8,13 @@ const StatusBadge = ({ status }) => {
         pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
         accepted: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         expired: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        failed: 'bg-red-100 text-gray-800 dark:bg-red-700 dark:text-gray-300'
     };
     const labels = {
         pending: 'Ожидает',
         accepted: 'Принято',
         expired: 'Истекло',
+        failed: 'Ошибка',
     };
 
     return (

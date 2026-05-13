@@ -69,9 +69,7 @@
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
     }
-    .glass-card:hover {
-        background: var(--color-bg-card-hover);
-    }
+
 
     /* Шапка со стеклянным эффектом */
     .glass-header {

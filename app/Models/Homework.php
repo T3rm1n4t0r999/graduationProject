@@ -17,8 +17,9 @@ class Homework extends Model
         'title',
         'description',
         'max_score',
-        'task_id',
+        'lesson_id',
         'organization_id',
+        'is_active',
     ];
 
     protected $casts = [
@@ -29,9 +30,9 @@ class Homework extends Model
         return $this->belongsTo(Organization::class);
     }
 
-    public function task(): BelongsTo
+    public function lesson(): BelongsTo
     {
-        return $this->belongsTo(LessonTask::class, 'task_id');
+        return $this->belongsTo(Lesson::class, 'lesson_id');
     }
 
     public function questions(): MorphMany

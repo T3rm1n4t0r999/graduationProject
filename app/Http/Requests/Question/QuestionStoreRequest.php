@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Http\Requests\Question;
+
+use App\Models\Homework;
+use App\Models\LessonTask;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class QuestionStoreRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            // --- Основные поля вопроса ---
+            'question' => ['required', 'string', 'min:5', 'max:2000'],
+            'question_type' => ['required', 'string', Rule::in(['single_choice', 'multiple_choice', 'text'])],
+            'points' => ['required', 'integer', 'min:1', 'max:100'],
+            'explanation' => ['nullable', 'string', 'max:1000'],
+            'is_active' => ['nullable', 'boolean'],
+
+            'questionable_type' => [
+                'required',
+                'string',
+                Rule::in([
+                    LessonTask::class,
+                    Homework::class,
+                    //Exam::class,
+                ])
+            ],
+            'questionable_id' => [
+                'required',
+                'integer',
+                Rule::exists($this->getQuestionableTable(), 'id')
+                    ->where(function ($query) {
+                        $query->where('organization_id', $this->route('organization')->id);
+                    })
+            ],
+
+            'options' => ['required', 'array', 'min:1'],
+            'options.*.text' => ['required', 'string', 'max:500'],
+
+            // Если correct_answers хранится отдельно (массив ID или значений)
+            'correct_answers' => ['required', 'array', 'min:1'],
+            'correct_answers.*' => ['required', 'string'],
+        ];
+    }
+}

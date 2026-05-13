@@ -54,4 +54,9 @@ class InvitationMail extends Mailable
             ],
         );
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->invitation->update(['status' => 'failed']);
+    }
 }

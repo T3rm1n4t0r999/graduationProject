@@ -21,7 +21,7 @@ class OrganizationPolicy
             ->exists();
     }
 
-    public function view_admin(User $user, Organization $organization): bool
+    public function consoleAction(User $user, Organization $organization): bool
     {
         if (!$organization->isVerified()){
             return false;
@@ -31,11 +31,7 @@ class OrganizationPolicy
             return true;
         }
 
-        return $organization->users()
-            ->where('user_id', $user->id)
-            ->wherePivot('is_active', true)
-            ->wherePivotIn('role', [OrganizationRole::Manager,OrganizationRole::Owner, OrganizationRole::Teacher])
-            ->exists();
+        return $organization->userHasRole($user, [OrganizationRole::Manager,OrganizationRole::Owner, OrganizationRole::Teacher]);
     }
 
 

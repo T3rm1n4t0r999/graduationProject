@@ -33,6 +33,7 @@ return new class extends Migration
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
 
             // Индексы

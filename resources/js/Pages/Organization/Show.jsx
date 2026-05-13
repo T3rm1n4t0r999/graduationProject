@@ -108,7 +108,7 @@ export default function Show({ organization, users, bot, invitations, isVerified
 
                         <div className="flex gap-3">
                             <a
-                                href={isVerified ? route('organization.admin', {organization: organization.id}) : '#'}
+                                href={isVerified ? route('organization.console', organization) : '#'}
                                 onClick={(e) => !isVerified && e.preventDefault()}
                                 disabled={!isVerified}
                                 className={`btn-primary ${!isVerified ? 'opacity-50 pointer-events-none' : ''}`}

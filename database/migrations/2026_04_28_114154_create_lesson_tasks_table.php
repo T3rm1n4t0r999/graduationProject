@@ -13,6 +13,8 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->integer('max_score')->default(0);
+            $table->boolean('is_active')->default(false);
+            $table->integer('order')->default(1);
             $table->foreignId('lesson_id')
                 ->constrained('lessons')
                 ->cascadeOnDelete();
