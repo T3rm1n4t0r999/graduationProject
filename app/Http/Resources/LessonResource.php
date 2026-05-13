@@ -19,9 +19,9 @@ class LessonResource extends JsonResource
             'module_id' => $this->module_id,
 
             'tasks'        => LessonTaskResource::collection($this->whenLoaded('tasks')),
-            'tasks_count'  => $this->whenCounted('lessonTasks'),
+            'tasks_count'  => $this->whenCounted('tasks'),
             'materials'        => LessonMaterialResource::collection($this->whenLoaded('materials')),
-            'materials_count'  => $this->whenCounted('lessonMaterials'),
+            'materials_count'  => $this->whenCounted('materials'),
         ];
     }
 }

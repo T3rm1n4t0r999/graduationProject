@@ -51,7 +51,6 @@ function TaskCard({ task, organizationId }) {
 
 export default function List({ auth, organization, tasks, lessons }) {
     const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
-
     const handleTaskCreated = () => {
         setIsCreateTaskModalOpen(false);
         router.reload({ only: ['tasks'], preserveScroll: true });

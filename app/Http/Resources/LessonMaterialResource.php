@@ -16,7 +16,7 @@ class LessonMaterialResource extends JsonResource
             'order' => $this->order,
             'lesson_id' => $this->lesson_id,
             'material_type' => $this->material_type,
-            'content' => $this->material_type,
+            'content' => $this->content,
 
 //            'lessonTasks'        => LessonTaskResource::collection($this->whenLoaded('lessonTasks')),
 //            'lessonTasks_count'  => $this->whenCounted('lessonTasks'),

@@ -2,7 +2,7 @@ import {useSortable} from "@dnd-kit/sortable";
 import {CSS} from "@dnd-kit/utilities";
 import {Link} from "@inertiajs/react";
 
-export default function ModuleCard({ module, isReordering }) {
+export default function ModuleCard({organization, module, isReordering }) {
     const {
         attributes,
         listeners,
@@ -94,7 +94,7 @@ export default function ModuleCard({ module, isReordering }) {
         return (
             <Link
                 href={route('module.show', {
-                    organization: route().params.organization,
+                    organization: organization.id,
                     module: module.id,
                 })}
                 className="block"

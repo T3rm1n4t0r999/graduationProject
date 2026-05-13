@@ -87,6 +87,10 @@ class Organization extends Model
         return $this->hasMany(LessonTask::class);
     }
 
+    public function lessonMaterials(): HasMany{
+        return $this->hasMany(LessonMaterial::class);
+    }
+
     public function questions(): HasMany{
         return $this->hasMany(Question::class);
     }

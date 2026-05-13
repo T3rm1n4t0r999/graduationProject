@@ -1,8 +1,8 @@
-import {useSortable} from "@dnd-kit/sortable";
-import {CSS} from "@dnd-kit/utilities";
-import {Link} from "@inertiajs/react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Link } from "@inertiajs/react";
 
-export default function LessonCard({ lesson, isReordering }) {
+export default function SortableMaterialCard({ organization, material, isReordering }) {
     const {
         attributes,
         listeners,
@@ -10,7 +10,7 @@ export default function LessonCard({ lesson, isReordering }) {
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: lesson.id });
+    } = useSortable({ id: material.id });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -18,41 +18,51 @@ export default function LessonCard({ lesson, isReordering }) {
         opacity: isDragging ? 0.7 : 1,
     };
 
+    // Контент карточки
     const content = (
         <div
             ref={setNodeRef}
             style={style}
             {...attributes}
             {...listeners}
-            className={`glass-card p-6 hover:shadow-md transition-shadow flex flex-col justify-between ${
-                isReordering ? 'cursor-grab active:cursor-grabbing' : ''
-            } ${isDragging ? 'shadow-lg z-30' : ''}`}
+            className={`glass-card p-6 hover:shadow-md transition-shadow flex flex-col ${
+                isReordering ? "cursor-grab active:cursor-grabbing" : ""
+            } ${isDragging ? "shadow-lg z-30" : ""}`}
         >
-            <div>
+            <div className="flex-1">
                 <h3
                     className="text-lg font-semibold mb-2"
-                    style={{ color: 'var(--color-text-primary)' }}
+                    style={{ color: "var(--color-text-primary)" }}
                 >
-                    {lesson.title}
+                    {material.title}
                 </h3>
-                <p
-                    className="text-sm line-clamp-2"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                >
-                    {lesson.description || 'Описание отсутствует'}
-                </p>
+
             </div>
+
+            {/* Футер с информацией: порядок, баллы, статус */}
             <div
-                className="mt-4 pt-4 border-t flex items-center justify-between text-xs"
-                style={{ borderColor: 'var(--color-border)' }}
+                className="mt-auto pt-4 border-t flex items-center justify-between text-xs flex-wrap gap-2"
+                style={{ borderColor: "var(--color-border)" }}
             >
-                <span style={{ color: 'var(--color-text-muted)' }}>
-                  Порядок: {lesson.order}
-                </span>
+        <span style={{ color: "var(--color-text-muted)" }}>
+          Порядок: {material.order}
+        </span>
+            {/* Статус активности */}
+            <span className="flex items-center gap-1.5">
+              <span
+                  className={`w-2 h-2 rounded-full ${
+                      material.is_active ? "bg-green-500" : "bg-gray-400"
+                  }`}
+              />
+              <span style={{ color: "var(--color-text-muted)" }}>
+                {material.is_active ? "Активно" : "Неактивно"}
+              </span>
+        </span>
+
                 {!isReordering && (
                     <span
                         className="flex items-center gap-1"
-                        style={{ color: 'var(--color-primary)' }}
+                        style={{ color: "var(--color-primary)" }}
                     >
             <svg
                 className="w-4 h-4"
@@ -70,10 +80,11 @@ export default function LessonCard({ lesson, isReordering }) {
             Подробнее
           </span>
                 )}
+
                 {isReordering && (
                     <div
                         className="flex items-center gap-1"
-                        style={{ color: 'var(--color-text-muted)' }}
+                        style={{ color: "var(--color-text-muted)" }}
                     >
                         <svg
                             className="w-3 h-3"
@@ -89,20 +100,6 @@ export default function LessonCard({ lesson, isReordering }) {
         </div>
     );
 
-    // Оборачиваем в ссылку только если не режим перетаскивания
-    if (!isReordering) {
-        return (
-            <Link
-                href={route('lesson.show', {
-                    organization: route().params.organization,
-                    lesson: lesson.id,
-                })}
-                className="block"
-            >
-                {content}
-            </Link>
-        );
-    }
 
     return content;
 }

@@ -5,7 +5,7 @@ import { Fragment, useState } from 'react';
 export default function CreateMaterialForm({ isOpen, onClose, onSuccess, organization, lessons = null, lesson = null }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         title: '',
-        description: '',
+        content: '',
         lesson_id: lesson?.id || '',
         is_active: false,
     });
@@ -13,7 +13,7 @@ export default function CreateMaterialForm({ isOpen, onClose, onSuccess, organiz
 
         e.preventDefault();
         post(
-            route('lessonTask.store', {
+            route('material.store', {
                 organization: organization.id
             }),
             {
@@ -62,7 +62,7 @@ export default function CreateMaterialForm({ isOpen, onClose, onSuccess, organiz
                         >
                             <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl glass-card p-6 text-left align-middle shadow-xl transition-all relative z-10">
                                 <Dialog.Title as="h3" className="text-lg font-medium text-main mb-4">
-                                    Новое задание
+                                    Новый материал
                                 </Dialog.Title>
 
                                 <form onSubmit={submit}>
@@ -157,33 +157,33 @@ export default function CreateMaterialForm({ isOpen, onClose, onSuccess, organiz
                                         <label className="block text-sm font-medium text-main">Описание</label>
                                         <input
                                             type="text"
-                                            value={data.description}
-                                            onChange={(e) => setData('description', e.target.value)}
+                                            value={data.content}
+                                            onChange={(e) => setData('content', e.target.value)}
                                             className="form-input-glass mt-1"
                                             placeholder="Описание задания"
                                         />
-                                        {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
+                                        {errors.content && <p className="mt-1 text-sm text-red-500">{errors.content}</p>}
                                     </div>
 
 
-                                    {/* Переключатель "Активное задание" */}
-                                    <div className="mb-6 flex items-center justify-between">
-                                        <span className="text-sm font-medium text-main">Сделать активным</span>
-                                        <Switch
-                                            checked={data.is_active}
-                                            onChange={(value) => setData('is_active', value)}
-                                            style={{
-                                                background: data.is_active ? 'var(--color-primary)' : 'var(--color-text-muted)'
-                                            }}
-                                            className='relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none'
-                                        >
-                                            <span
-                                                className={`${
-                                                    data.is_active ? 'translate-x-6' : 'translate-x-1'
-                                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                                            />
-                                        </Switch>
-                                    </div>
+                                    {/*/!* Переключатель "Активное задание" *!/*/}
+                                    {/*<div className="mb-6 flex items-center justify-between">*/}
+                                    {/*    <span className="text-sm font-medium text-main">Сделать активным</span>*/}
+                                    {/*    <Switch*/}
+                                    {/*        checked={data.is_active}*/}
+                                    {/*        onChange={(value) => setData('is_active', value)}*/}
+                                    {/*        style={{*/}
+                                    {/*            background: data.is_active ? 'var(--color-primary)' : 'var(--color-text-muted)'*/}
+                                    {/*        }}*/}
+                                    {/*        className='relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none'*/}
+                                    {/*    >*/}
+                                    {/*        <span*/}
+                                    {/*            className={`${*/}
+                                    {/*                data.is_active ? 'translate-x-6' : 'translate-x-1'*/}
+                                    {/*            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}*/}
+                                    {/*        />*/}
+                                    {/*    </Switch>*/}
+                                    {/*</div>*/}
 
                                     {/* Кнопки */}
                                     <div className="flex justify-end gap-3">

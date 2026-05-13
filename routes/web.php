@@ -50,16 +50,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('lesson.reorder');
 
     Route::resource('organization/{organization}/console/task', LessonTaskController::class);
-    Route::patch('organization/{organization}/console/lessonTask/{task}',  [LessonTaskController::class, 'setActive'])
-        ->name('lessonTask.setActive');
+    Route::patch('organizations/{organization}/lesson/{lesson}/task-reorder', [LessonTaskController::class, 'reorder'])
+        ->name('task.reorder');
 
-    Route::resource('organization/{organization}/console/material', LessonTaskController::class);
-    Route::patch('organizations/{organization}/modules/{module}/materials-reorder', [LessonMaterialController::class, 'reorder'])
-        ->name('lesson.reorder');
+    Route::resource('organization/{organization}/console/material', LessonMaterialController::class);
+    Route::patch('organizations/{organization}/lesson/{lesson}/material-reorder', [LessonMaterialController::class, 'reorder'])
+        ->name('material.reorder');
 
     Route::resource('organization/{organization}/console/question', QuestionController::class);
     Route::patch('organizations/{organization}/Tasks/{task}/questions-reorder', [QuestionController::class, 'reorder'])
-        ->name('lesson.reorder');
+        ->name('question.reorder');
 
 });
 

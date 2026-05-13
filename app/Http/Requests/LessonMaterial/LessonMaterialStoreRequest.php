@@ -10,8 +10,10 @@ class LessonMaterialStoreRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:20'],
-            'description' => ['nullable', 'string', 'max:200'],
-            'course_id' => ['required', 'integer', 'exists:courses,id'],
+            'content' => ['nullable', 'string', 'max:200'],
+            'lesson_id' => ['required', 'integer', 'exists:lessons,id'],
+            'material_type' => ['nullable', 'string'],
+            'is_active' => ['nullable', 'boolean'],
         ];
     }
 }

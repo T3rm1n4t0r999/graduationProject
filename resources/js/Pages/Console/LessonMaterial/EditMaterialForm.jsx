@@ -3,19 +3,19 @@ import { useForm, usePage } from '@inertiajs/react';
 import {Dialog, Listbox, Transition} from '@headlessui/react';
 import { Fragment, useState } from 'react';
 
-export default function EditMaterialForm({ isOpen, onClose, onSuccess, task, organization, lessons}) {
+export default function EditMaterialForm({ isOpen, onClose, onSuccess, material, organization, lessons}) {
     const { data, setData, put, processing, errors, reset } = useForm({
-        title: task?.title || '',
-        description: task?.description || '',
-        lesson_id: task.lesson_id || '',
+        title: material?.title || '',
+        content: material?.content || '',
+        lesson_id: material.lesson_id || '',
     });
 
 
     const submit = (e) => {
         e.preventDefault();
-        put(route('lessonTask.update', {
+        put(route('material.update', {
             organization: organization.id,
-            task: task.id
+            material: material.id
         }), {
             preserveState: true,
             preserveScroll: true,
@@ -61,7 +61,7 @@ export default function EditMaterialForm({ isOpen, onClose, onSuccess, task, org
                             >
                                 <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl glass-card p-6 text-left align-middle shadow-xl transition-all">
                                     <Dialog.Title as="h3" className="text-lg font-medium text-main mb-4">
-                                        Редактирование задания
+                                        Редактирование материал
                                     </Dialog.Title>
 
                                     <form onSubmit={submit}>
@@ -149,11 +149,11 @@ export default function EditMaterialForm({ isOpen, onClose, onSuccess, task, org
                                             <label className="block text-sm font-medium text-main">Описание</label>
                                             <input
                                                 type="text"
-                                                value={data.description}
-                                                onChange={(e) => setData('description', e.target.value)}
+                                                value={data.content}
+                                                onChange={(e) => setData('content', e.target.value)}
                                                 className="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-main shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                             />
-                                            {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
+                                            {errors.content && <p className="mt-1 text-sm text-red-500">{errors.content}</p>}
                                         </div>
 
                                         <div className="flex justify-between items-center flex-wrap gap-3">

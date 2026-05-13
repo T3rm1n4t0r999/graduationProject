@@ -62,14 +62,17 @@ class LessonTask extends Model
     {
         parent::boot();
 
-        // Обновляем max_score при сохранении LessonTask
-        static::saved(function ($lessonTask) {
-            $lessonTask->updateMaxScore();
+        static::creating(function (LessonTask $lessonTask) {
+            if (empty($module->order)) {
+                $lessonTask->order = static::where('lesson_id', $lessonTask->lesson_id)
+                        ->max('order') + 1;
+            }
         });
 
-        // Обновляем max_score при удалении LessonTask
-        static::deleted(function ($lessonTask) {
-            // Логика при удалении если нужна
+        static::deleted(function (LessonTask $lessonTask) {
+            LessonTask::where('lesson_id', $lessonTask->lesson_id)
+                ->where('order', '>', $lessonTask->order)
+                ->decrement('order');
         });
     }
 

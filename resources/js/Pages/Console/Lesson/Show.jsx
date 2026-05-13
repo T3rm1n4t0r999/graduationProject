@@ -3,13 +3,13 @@ import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 import ConfirmDeleteModal from "@/Components/ConfirmDeleteModal";
 import EditLessonForm from "@/Pages/Console/Lesson/EditLessonForm";
-import SortableLessonTasks from "@/Pages/Console/Lesson/SortableLessonTasks";
+import SortableTasks from "@/Pages/Console/Lesson/SortableTasks.jsx";
+import SortableMaterials from "@/Pages/Console/Lesson/SortableMaterials.jsx";
 
 export default function Show({ auth, organization, lesson, modules }) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    console.log(lesson)
     const handleLessonEdited = () => {
         setIsEditModalOpen(false);
         router.reload({ only: ["lesson"], preserveScroll: true });
@@ -111,8 +111,16 @@ export default function Show({ auth, organization, lesson, modules }) {
 
                 {/* Задания урока */}
                 <div className="glass-card p-8">
-                    <SortableLessonTasks
+                    <SortableTasks
                         tasks={lesson.tasks ?? []}
+                        organization={organization}
+                        lesson={lesson}
+                    />
+                </div>
+
+                <div className="glass-card p-8 mt-8">
+                    <SortableMaterials
+                        materials={lesson.materials ?? []}
                         organization={organization}
                         lesson={lesson}
                     />

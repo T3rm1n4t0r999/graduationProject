@@ -31,13 +31,10 @@ function LessonCard({ lesson, organizationId }) {
                 style={{ borderColor: 'var(--color-border)' }}
             >
                 <span style={{ color: 'var(--color-text-muted)' }}>
-                    Порядок: {lesson.order}
+                    задания: {lesson?.tasks_count ? lesson?.tasks_count : '0'}
                 </span>
                 <span style={{ color: 'var(--color-text-muted)' }}>
-                    материалы: {lesson?.lesson_tasks?.length ? lesson?.lesson_tasks?.length : '0'}
-                </span>
-                <span style={{ color: 'var(--color-text-muted)' }}>
-                    задания: {lesson?.lesson_materials?.length ? lesson?.lesson_materials?.length : '0'}
+                    материалы: {lesson?.materials_count ? lesson?.materials_count : '0'}
                 </span>
                 <span className="flex items-center gap-1" style={{ color: 'var(--color-primary)' }}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

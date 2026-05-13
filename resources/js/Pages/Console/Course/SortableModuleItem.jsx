@@ -148,7 +148,10 @@ export default function SortableModules({ modules}) {
                             })}
                             className="block"
                         >
-                            <SortableModuleItem module={module} isReordering={false} />
+                            <SortableModuleItem
+                                organization={organization}
+                                module={module}
+                                isReordering={false} />
                         </Link>
                     ))}
                 </div>

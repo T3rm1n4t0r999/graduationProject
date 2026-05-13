@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Link } from "@inertiajs/react";
 
-export default function SortableLessonTaskCard({ organization, lesson, task, isReordering }) {
+export default function SortableTaskCard({ organization, task, isReordering }) {
     const {
         attributes,
         listeners,
@@ -112,21 +112,6 @@ export default function SortableLessonTaskCard({ organization, lesson, task, isR
             </div>
         </div>
     );
-
-    // Если не режим перетаскивания – оборачиваем в ссылку на задание
-    if (!isReordering) {
-        return (
-            <Link
-                href={route("task.show", {
-                    organization: organization.id,
-                    task: task.id,
-                })}
-                className="block"
-            >
-                {content}
-            </Link>
-        );
-    }
 
     return content;
 }

@@ -1,27 +1,26 @@
-// resources/js/Pages/Console/Tasks/Show.jsx
+// resources/js/Pages/Console/Materials/Show.jsx
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import ConfirmDeleteModal from "@/Components/ConfirmDeleteModal.jsx";
-import EditTaskForm from "@/Pages/Console/LessonTask/EditTaskForm.jsx";
-import SortableQuestions from "@/Pages/Console/LessonTask/SortableQuestionItem.jsx";
+import EditMaterialForm from "@/Pages/Console/LessonMaterial/EditMaterialForm.jsx";
 
-export default function Show({ auth, organization, task, lessons }) {
-    const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
+export default function Show({ auth, organization, material, lessons }) {
+    const [isEditMaterialModalOpen, setIsEditMaterialModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleTaskEdited = () => {
-        setIsEditTaskModalOpen(false);
-        router.reload({ only: ['task'], preserveScroll: true });
+    const handleMaterialEdited = () => {
+        setIsEditMaterialModalOpen(false);
+        router.reload({ only: ['material'], preserveScroll: true });
     };
 
     const handleDelete = () => {
         setIsDeleting(true);
         router.delete(
-            route('lessonTask.destroy', {
+            route('material.destroy', {
                 organization: organization.id,
-                lessonTask: task.id,
+                material: material.id,
             }),
             {
                 preserveState: false,
@@ -43,24 +42,24 @@ export default function Show({ auth, organization, task, lessons }) {
                 {/* Хлебные крошки */}
                 <nav className="flex items-center gap-2 text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
                     <Link
-                        href={route('lessonTask.index', organization.id)}
+                        href={route('material.index', organization.id)}
                         className="hover:underline"
                     >
-                        Модули
+                        Материалы
                     </Link>
                     <span>/</span>
-                    <span style={{ color: 'var(--color-text-primary)' }}>{task.title}</span>
+                    <span style={{ color: 'var(--color-text-primary)' }}>{material.title}</span>
                 </nav>
 
                 {/* Карточка задания */}
                 <div className="glass-card p-8 mb-8">
                     <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
                         <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                            {task.title}
+                            {material.title}
                         </h1>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setIsEditTaskModalOpen(true)}
+                                onClick={() => setIsEditMaterialModalOpen(true)}
                                 className="btn-primary"
                             >
                                 Редактировать
@@ -73,40 +72,40 @@ export default function Show({ auth, organization, task, lessons }) {
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                                Удалить задание
+                                Удалить материал
                             </button>
                         </div>
                     </div>
 
                     <div className="prose max-w-none mb-6" style={{ color: 'var(--color-text-secondary)' }}>
                         <p className="whitespace-pre-wrap">
-                            {task.description || 'Описание отсутствует'}
+                            {material.content || 'Описание отсутствует'}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        <span>Порядковый номер: {task.order}</span>
+                        <span>Порядковый номер: {material.order}</span>
                     </div>
                 </div>
 
                 {/* Вопросы задания */}
                 <div className="glass-card p-8">
                     {/*<SortableQuestions*/}
-                    {/*    lessons={task.lessons}*/}
+                    {/*    lessons={material.lessons}*/}
                     {/*    organization={organization.id}*/}
-                    {/*    task={task.id}*/}
+                    {/*    material={material.id}*/}
                     {/*/>*/}
                 </div>
             </div>
 
             {/* Модальные окна */}
-            <EditTaskForm
-                isOpen={isEditTaskModalOpen}
-                onClose={() => setIsEditTaskModalOpen(false)}
-                task={task}
-                lessons={lessons}
+            <EditMaterialForm
+                isOpen={isEditMaterialModalOpen}
+                onClose={() => setIsEditMaterialModalOpen(false)}
+                material={material}
+                lessons={lessons.data}
                 organization={organization}
-                onSuccess={handleTaskEdited}
+                onSuccess={handleMaterialEdited}
             />
 
             <ConfirmDeleteModal
@@ -114,7 +113,7 @@ export default function Show({ auth, organization, task, lessons }) {
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDelete}
                 title="Удаление задания"
-                message={`Вы действительно хотите удалить задание «${task.title}»? Все вопросы внутри задания также будут удалены. Это действие нельзя отменить.`}
+                message={`Вы действительно хотите удалить задание «${material.title}»? Все вопросы внутри задания также будут удалены. Это действие нельзя отменить.`}
                 processing={isDeleting}
             />
         </ConsoleLayout>
