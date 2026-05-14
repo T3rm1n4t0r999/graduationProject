@@ -33,6 +33,10 @@ const sidebarLinks = [
         label: 'Вопросы',
         href: (orgId) => route('question.index', { organization: orgId }),
     },
+    {
+        label: 'Домашние задания',
+        href: (orgId) => route('homework.index', { organization: orgId }),
+    },
 ];
 
 export default function ConsoleLayout({  children }) {

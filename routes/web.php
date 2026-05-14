@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Console\ConsoleController;
 use App\Http\Controllers\Console\CourseController;
+use App\Http\Controllers\Console\HomeworkController;
 use App\Http\Controllers\Console\LessonController;
 use App\Http\Controllers\Console\LessonMaterialController;
 use App\Http\Controllers\Console\LessonTaskController;
@@ -60,6 +61,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('organization/{organization}/console/question', QuestionController::class);
     Route::patch('organizations/{organization}/Tasks/{task}/questions-reorder', [QuestionController::class, 'reorder'])
         ->name('question.reorder');
+
+    Route::resource('organization/{organization}/console/homework', HomeworkController::class);
 
 });
 

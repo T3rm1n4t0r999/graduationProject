@@ -1,5 +1,5 @@
 <?php
-// app/Models/Homework.php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -7,19 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-class Homework extends Model
+class Exam extends Model
 {
     use HasFactory;
 
-    protected $table = 'homeworks';
+    protected $table = 'exams';
 
     protected $fillable = [
         'title',
         'description',
         'max_score',
-        'lesson_id',
+        'module_id',
         'organization_id',
         'is_active',
+        'time_limit',
     ];
 
     protected $casts = [
@@ -30,9 +31,9 @@ class Homework extends Model
         return $this->belongsTo(Organization::class);
     }
 
-    public function lesson(): BelongsTo
+    public function module(): BelongsTo
     {
-        return $this->belongsTo(Lesson::class, 'lesson_id');
+        return $this->belongsTo(Module::class, 'module_id');
     }
 
     public function questions(): MorphMany
