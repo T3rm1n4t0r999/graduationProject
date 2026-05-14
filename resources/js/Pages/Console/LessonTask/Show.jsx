@@ -15,7 +15,7 @@ export default function Show({ auth, organization, task, lessons }) {
         setIsEditTaskModalOpen(false);
         router.reload({ only: ['task'], preserveScroll: true });
     };
-
+    
     const handleDelete = () => {
         setIsDeleting(true);
         router.delete(

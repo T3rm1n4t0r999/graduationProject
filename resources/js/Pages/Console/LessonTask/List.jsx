@@ -31,7 +31,7 @@ function TaskCard({ task, organizationId }) {
                 style={{ borderColor: 'var(--color-border)' }}
             >
                 <span style={{ color: 'var(--color-text-muted)' }}>
-                Вопросы: {task?.questions?.length ? task?.lessons?.length : '0'}
+                Вопросы: {task?.questions_count ? task?.questions_count : '0'}
                 </span>
                 <span className="flex items-center gap-1" style={{ color: 'var(--color-primary)' }}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +55,6 @@ export default function List({ auth, organization, tasks, lessons }) {
         setIsCreateTaskModalOpen(false);
         router.reload({ only: ['tasks'], preserveScroll: true });
     };
-
     return (
         <ConsoleLayout
             auth={auth}

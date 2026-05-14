@@ -21,10 +21,5 @@ class LessonTaskResource extends JsonResource
             'questions_count'  => $this->whenCounted('questions'),
         ];
     }
-    public function showDetails(bool $show = true): static
-    {
-        $this->showDetails = $show;
-        return $this;
-    }
 
 }

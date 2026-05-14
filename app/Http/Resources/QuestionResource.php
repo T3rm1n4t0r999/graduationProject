@@ -22,14 +22,7 @@ class QuestionResource extends JsonResource
             'points' => $this->points,
             'explanation' => $this->explanation,
 
-//            'questions'        => QuestionResource::collection($this->whenLoaded('questions')),
-//            'questions_count'  => $this->whenCounted('questions'),
+            'questionable' => $this->whenLoaded('questionable')
         ];
-    }
-
-    public function showDetails(bool $show = true): static
-    {
-        $this->showDetails = $show;
-        return $this;
     }
 }

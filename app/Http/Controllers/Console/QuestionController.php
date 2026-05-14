@@ -2,24 +2,21 @@
 
 namespace App\Http\Controllers\Console;
 
-use App\Enums\QuestionableType;
-use App\Http\Requests\LessonTask\LessonTaskSetActiveRequest;
-use App\Http\Requests\LessonTask\LessonTaskStoreRequest;
-use App\Http\Requests\LessonTask\LessonTaskUpdateRequest;
-use App\Http\Requests\Module\QuestionStoreRequest;
-use App\Http\Requests\Module\QuestionUpdateRequest;
-use App\Http\Resources\LessonResource;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Question\QuestionReorderRequest;
+use App\Http\Requests\Question\QuestionStoreRequest;
+use App\Http\Requests\Question\QuestionUpdateRequest;
 use App\Http\Resources\LessonTaskResource;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\QuestionResource;
-use App\Models\Homework;
 use App\Models\LessonTask;
 use App\Models\Organization;
 use App\Models\Question;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 
-class QuestionController
+class QuestionController extends Controller
 {
     public function index(Organization $organization)
     {
@@ -27,15 +24,18 @@ class QuestionController
 
         $questions = $organization
             ->questions()
+            ->with('questionable')
+            ->orderBy('order')
             ->get();
+
         $lessonTasks = $organization
             ->lessonTasks()
             ->get();
 
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
-            'questions'       => LessonResource::collection($questions)->showDetails(false),
-            'tasks'      => LessonTaskResource::collection($lessonTasks)->showDetails(false),
+            'questions'    => QuestionResource::collection($questions),
+            'tasks'        => LessonTaskResource::collection($lessonTasks),
         ]);
     }
 
@@ -44,25 +44,19 @@ class QuestionController
         $this->authorize('consoleAction', $organization);
         abort_unless($question->organization_id === $organization->id, 404);
 
+        $question->load('questionable');
+
         $currentParent = $question->questionable;
         $relatedItemsCollection = collect();
         if ($currentParent instanceof LessonTask) {
             $tasks = $organization->lessonTasks()->get();
-            $relatedItemsCollection = LessonTaskResource::collection($tasks)->showDetails(false);
+            $relatedItemsCollection = LessonTaskResource::collection($tasks);
         }
-//        elseif ($currentParent instanceof Homework) {
-//            $homeworks = $organization->homeworks()->get();
-//            $relatedItemsCollection = HomeworkResource::collection($homeworks)->showDetails(false);
-//        }
-//          elseif ($currentParent instanceof Exam) {
-//          $exams = $organization->exams()->get();
-//          $relatedItemsCollection = ExamResource::collection($exams)->showDetails(false);
-//}
 
-        return Inertia::render('Console/LessonTask/Show', [
+        return Inertia::render('Console/Question/Show', [
             'organization' => new OrganizationResource($organization),
-            'question' => new QuestionResource($question),
-            'parents' => $relatedItemsCollection,
+            'question'     => new QuestionResource($question),
+            'parents'      => $relatedItemsCollection,
         ]);
     }
 
@@ -71,42 +65,49 @@ class QuestionController
         $this->authorize('consoleAction', $organization);
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
-        $validated['max_score'] = 0;
-        LessonTask::create($validated);
+        Question::create($validated);
 
-        return back()->with('success', 'Задание успешно создано');
+        return back()->with('success', 'Вопрос успешно создан');
     }
 
-//    public function switchActive(LessonTaskSetActiveRequest $request, Organization $organization, LessonTask $lessonTask)
-//    {
-//        $this->authorize('consoleAction', $organization);
-//        $validated = $request->validated();
-//        $lessonTask->update($validated);
-//        return back()->with('success', 'Задание успешно обновлено');
-//    }
-
-
-    public function update(QuestionUpdateRequest $request, Organization $organization, LessonTask $lessonTask)
+    public function update(QuestionUpdateRequest $request, Organization $organization, Question $question)
     {
         $this->authorize('consoleAction', $organization);
-        abort_unless($lessonTask->organization_id === $organization->id, 404);
+        abort_unless($question->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
 
-        $lessonTask->update($validated);
+        $question->update($validated);
 
-        return back()->with('success', 'Задание успешно обновлено');
+        return back()->with('success', 'Вопрос успешно обновлен');
     }
 
-    public function destroy(Organization $organization, LessonTask $lessonTask)
+    public function destroy(Organization $organization, Question $question)
     {
         $this->authorize('consoleAction', $organization);
-        abort_unless($lessonTask->organization_id === $organization->id, 404);
+        abort_unless($question->organization_id === $organization->id, 404);
 
-        $lessonTask->delete();
+        $question->delete();
 
-        return Redirect::route('lessonTask.index', [
-            'organization' => new OrganizationResource($organization),
-        ])->with('success', 'Задание успешно создано');
+        return Redirect::route('question.index', [
+            'organization' => $organization->id,
+        ])->with('success', 'Вопрос успешно удален');
+    }
+
+    public function reorder(QuestionReorderRequest $request, Organization $organization, LessonTask $task)
+    {
+        $this->authorize('consoleAction', $organization);
+        abort_unless($task->organization_id === $organization->id, 404);
+
+        $validated = $request->validated();
+
+        foreach ($validated['items'] as $item) {
+            Question::where('id', $item['id'])
+                ->where('questionable_type', LessonTask::class)
+                ->where('questionable_id', $task->id)
+                ->update(['order' => $item['order']]);
+        }
+
+        return back()->with('success', 'Порядок вопросов обновлен');
     }
 }

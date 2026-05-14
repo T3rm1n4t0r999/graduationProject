@@ -121,6 +121,9 @@
     .text-label {
         color: var(--color-text-muted);
     }
+    .text-success {
+        color: var(--color-success);
+    }
 
     /* Инпуты */
     .form-input-glass {

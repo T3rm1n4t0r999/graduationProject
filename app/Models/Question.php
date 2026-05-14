@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Log;
 
 class Question extends Model
 {
@@ -23,6 +24,7 @@ class Question extends Model
         'questionable_type',
         'metadata',
         'explanation',
+        'organization_id',
         'is_active',
     ];
 
@@ -51,29 +53,70 @@ class Question extends Model
     /**
      * Boot метод для обновления max_score у родительского задания при изменении вопроса
      */
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 
-        // Обновляем max_score у LessonTask при сохранении вопроса
-        static::saved(function ($question) {
-            if ($question->questionable_type === 'App\\Models\\LessonTask' && $question->questionable_id) {
-                $lessonTask = LessonTask::find($question->questionable_id);
-                if ($lessonTask) {
-                    $lessonTask->updateMaxScore();
-                }
+        static::creating(function (Question $question) {
+            if (empty($question->order)) {
+                $question->order = static::where('questionable_type', $question->questionable_type)
+                        ->where('questionable_id', $question->questionable_id)
+                        ->max('order') + 1;
             }
         });
 
-        // Обновляем max_score у LessonTask при удалении вопроса
-        static::deleted(function ($question) {
-            if ($question->questionable_type === 'App\\Models\\LessonTask' && $question->questionable_id) {
-                $lessonTask = LessonTask::find($question->questionable_id);
-                if ($lessonTask) {
-                    $lessonTask->updateMaxScore();
+        static::created(function (Question $question) {
+            static::updateParentMaxScore($question->questionable_type, $question->questionable_id);
+        });
+
+        static::deleted(function (Question $question) {
+            static::where('questionable_type', $question->questionable_type)
+                ->where('questionable_id', $question->questionable_id)
+                ->where('order', '>', $question->order)
+                ->decrement('order');
+            static::updateParentMaxScore($question->questionable_type, $question->questionable_id);
+        });
+
+        static::updating(function (Question $question) {
+            $question->order = static::where('questionable_type', $question->questionable_type)
+                    ->where('questionable_id', $question->questionable_id)
+                    ->max('order') + 1;
+        });
+
+        static::updated(function (Question $question) {
+            $original = $question->getOriginal();
+            $oldParentType = $original['questionable_type'] ?? null;
+            $oldParentId   = $original['questionable_id'] ?? null;
+            $newParentType = $question->questionable_type;
+            $newParentId   = $question->questionable_id;
+
+            // 1. Изменился родительский элемент
+            if ($oldParentType !== $newParentType || $oldParentId !== $newParentId) {
+                if ($oldParentType && $oldParentId) {
+                    static::updateParentMaxScore($oldParentType, $oldParentId);
+                }
+                if ($newParentType && $newParentId) {
+                    static::updateParentMaxScore($newParentType, $newParentId);
+                }
+            }
+            // 2. Изменились баллы, но родитель остался тем же
+            elseif ($question->isDirty('points')) {
+                if ($newParentType && $newParentId) {
+                    static::updateParentMaxScore($newParentType, $newParentId);
                 }
             }
         });
+    }
+
+    /**
+     * Обновление max_score у полиморфного родителя
+     */
+    protected static function updateParentMaxScore(string $type, int $id): void
+    {
+        $parent = $type::find($id);
+        if ($parent && method_exists($parent, 'recalculateMaxScore')) {
+            $parent->recalculateMaxScore();
+        }
     }
 
 }

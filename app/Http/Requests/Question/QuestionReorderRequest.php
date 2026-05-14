@@ -11,7 +11,7 @@ class QuestionReorderRequest extends FormRequest
     {
         return [
             'items'              => ['required', 'array', 'min:1'],
-            'items.*.id'         => ['required', 'integer', 'exists:modules,id'],
+            'items.*.id'         => ['required', 'integer', 'exists:questions,id'],
             'items.*.order'      => ['required', 'integer', 'min:1'],
         ];
     }

@@ -76,15 +76,14 @@ class LessonTask extends Model
         });
     }
 
-    /**
-     * Обновить max_score на основе суммы баллов всех вопросов
-     */
-    public function updateMaxScore(): void
-    {
-        $totalScore = $this->questions()->sum('points');
+    public function recalculateMaxScore(){
+        $totalPoints = $this->questions()
+            ->where('is_active', true)
+            ->sum('points');
 
-        if ($this->max_score !== $totalScore) {
-            $this->update(['max_score' => $totalScore]);
-        }
+        // Обновляем поле max_score в самой модели
+        $this->update(['max_score' => $totalPoints]);
+
+        return $totalPoints;
     }
 }

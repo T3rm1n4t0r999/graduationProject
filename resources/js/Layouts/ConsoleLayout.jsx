@@ -29,6 +29,10 @@ const sidebarLinks = [
         label: 'Материалы',
         href: (orgId) => route('material.index', { organization: orgId }),
     },
+    {
+        label: 'Вопросы',
+        href: (orgId) => route('question.index', { organization: orgId }),
+    },
 ];
 
 export default function ConsoleLayout({  children }) {
