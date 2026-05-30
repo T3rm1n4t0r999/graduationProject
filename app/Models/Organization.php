@@ -87,6 +87,10 @@ class Organization extends Model
         return $this->hasMany(LessonTask::class);
     }
 
+    public function exams(): HasMany{
+        return $this->hasMany(Exam::class);
+    }
+
     public function lessonMaterials(): HasMany{
         return $this->hasMany(LessonMaterial::class);
     }
@@ -99,11 +103,15 @@ class Organization extends Model
         return $this->hasMany(Homework::class);
     }
 
+    public function students(): HasMany{
+        return $this->hasMany(Student::class);
+    }
 
+    public function groups(): HasMany
+    {
+        return $this->hasMany(Group::class);
+    }
 
-    /**
-     * Get the tenants that the user can access.
-     */
 
     public function isVerified(): bool
     {

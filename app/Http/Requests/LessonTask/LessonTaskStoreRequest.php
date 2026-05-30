@@ -13,6 +13,7 @@ class LessonTaskStoreRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:200'],
             'lesson_id' => ['required', 'integer', 'exists:lessons,id'],
             'is_active' => ['required', 'boolean'],
+            'max_attempts' => ['nullable', 'integer'],
         ];
     }
 }

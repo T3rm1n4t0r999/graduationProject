@@ -3,11 +3,13 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import ConfirmDeleteModal from "@/Components/ConfirmDeleteModal.jsx";
 import EditQuestionForm from "@/Pages/Console/Question/EditQuestionForm.jsx";
+import TelegramPreview from "@/Pages/Console/Question/Telegram preview.jsx";
 
-export default function Show({ auth, organization, question, parents }) {
+export default function Show({ auth, organization, question, parents = [] }) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [lightboxImage, setLightboxImage] = useState(null); // <-- для картинки
 
     const handleQuestionEdited = () => {
         setIsEditModalOpen(false);
@@ -37,169 +39,163 @@ export default function Show({ auth, organization, question, parents }) {
             single_choice: 'Один вариант',
             multiple_choice: 'Несколько вариантов',
             text: 'Текстовый ответ',
+            free_text: 'Свободный ответ',
         };
         return labels[type] || type;
     };
 
-    const getParentTitle = () => {
-        if (!question.questionable) return 'Не привязан';
-        return question.questionable.title || `ID: ${question.questionable.id}`;
+    const questionableType = question.questionable_type;
+    const typeMap = {
+        'lesson_task': 'task',
+        'homework': 'homework',
+        'exam': 'exam',
     };
+    const parentType = typeMap[questionableType] || null;
+
+    const parentLabels = { task: 'Задание', homework: 'ДЗ', exam: 'КР' };
+    const parentLabel = parentType ? parentLabels[parentType] : '';
+
+    const parentRoutes = { task: 'task.show', homework: 'homework.show', exam: 'exam.show' };
+    const parentRoute = parentType ? parentRoutes[parentType] : null;
+
+    const parentId = question.questionable?.id || question.questionable_id;
+    const parentTitle = question.questionable?.title || `ID: ${parentId}`;
+    const context = parentType || 'task';
 
     return (
         <ConsoleLayout auth={auth} organization={organization}>
-            <div className="max-w-4xl mx-auto px-4 sm:px-0">
+            <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
                 {/* Хлебные крошки */}
-                <nav className="flex items-center gap-2 text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                <nav className="flex items-center gap-2 text-sm text-meta">
                     <Link
-                        href={route('question.index', { organization: organization.id })}
-                        className="hover:underline hover:text-primary transition-colors"
+                        href={route(`question.${context}.index`, { organization: organization.id })}
+                        className="hover:text-main transition-colors"
                     >
-                        Вопросы
+                        ← Вопросы
                     </Link>
                     <span>/</span>
-                    <span className="truncate max-w-xs" style={{ color: 'var(--color-text-primary)' }}>
+                    <span className="text-main font-medium truncate max-w-xs">
                         {question.question?.substring(0, 60)}
                         {question.question?.length > 60 ? '...' : ''}
                     </span>
                 </nav>
 
                 {/* Карточка вопроса */}
-                <div className="glass-card p-6 sm:p-8 mb-8 animate-fade-in">
+                <div className="glass-card p-6 md:p-8 space-y-8">
+                    {/* Изображение вопроса (если есть) */}
+                    {question.image && (
+                        <div
+                            className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
+                            onClick={() => setLightboxImage(question.image)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && setLightboxImage(question.image)}
+                            aria-label="Открыть изображение в полном размере"
+                        >
+                            <img
+                                src={question.image.url}
+                                alt={question.image.name || 'Изображение вопроса'}
+                                className="w-full h-64 md:h-72 object-cover transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                                <span className="text-white text-sm font-medium">
+                                    {question.image.name} · {question.image.human_size}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Заголовок и кнопки */}
-                    <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
-                        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <h1 className="text-2xl md:text-3xl font-bold text-main truncate">
                             {question.question}
                         </h1>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setIsEditModalOpen(true)}
-                                className="btn-primary group"
-                            >
-                                <svg className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Редактировать
+                        <div className="flex items-center gap-3 self-start">
+                            <button onClick={() => setIsEditModalOpen(true)} className="btn-primary gap-2">
+                                ✎ Редактировать
                             </button>
                             <button
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                className="btn-ghost group"
-                                style={{ color: 'var(--color-error)' }}
+                                className="btn-ghost gap-2"
+                                style={{ color: 'var(--color-accent-rose)' }}
                             >
-                                <svg className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Удалить
+                                ✕ Удалить
                             </button>
                         </div>
                     </div>
 
-                    {/* Метаданные */}
-                    <div className="flex flex-wrap items-center gap-3 mb-6 pb-6 border-b" style={{ borderColor: 'var(--color-border)'}}>
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary" style={{ color: 'var(--color-text-primary)' }}>
-                            {getTypeLabel(question.question_type)}
-                        </span>
-                        <span className="flex items-center gap-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Баллы: <strong style={{ color: 'var(--color-primary)' }}>{question.points}</strong>
-                        </span>
-                        <span className="flex items-center gap-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                            </svg>
-                            Порядок: {question.order}
-                        </span>
-                        <span className={`flex items-center gap-1 text-sm font-medium ${question.is_active ? 'text-success' : 'text-meta'}`}>
-                            {question.is_active ? (
-                                <>
-                                    <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-                                    Активен
-                                </>
-                            ) : (
-                                <>
-                                    <span className="w-2 h-2 rounded-full bg-meta"></span>
-                                    Неактивен
-                                </>
-                            )}
-                        </span>
-                    </div>
-
-                    {/* Привязка к заданию */}
-                    <div className="flex items-center gap-2 p-3 rounded-xl mb-6" style={{ background: 'var(--color-bg)', color: 'var(--color-text-primary)' }}>
-                        <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--color-text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                            Привязан к: <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{getParentTitle()}</span>
-                        </span>
+                    {/* Мета-информация */}
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                        <MetaBadge label="Порядок" value={question.order} />
+                        <MetaBadge label="Баллы" value={question.points ?? 0} />
+                        <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
+                            <span className={`inline-block w-2 h-2 rounded-full ${question.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                            <span className={question.is_active ? 'text-success' : 'text-meta'}>
+                                {question.is_active ? 'Активно' : 'Неактивно'}
+                            </span>
+                        </div>
+                        <MetaBadge label="Тип" value={getTypeLabel(question.question_type)} />
+                        {parentId && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-sm text-meta">{parentLabel}:</span>
+                                {parentRoute ? (
+                                    <Link
+                                        href={route(parentRoute, {
+                                            organization: organization.id,
+                                            [parentType === 'lesson_task' ? 'task' : parentType]: parentId,
+                                        })}
+                                        className="badge hover:underline"
+                                    >
+                                        {parentTitle}
+                                    </Link>
+                                ) : (
+                                    <span className="text-sm text-main">{parentTitle}</span>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Варианты ответов */}
                     {question.options && question.options.length > 0 && (
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
+                        <div>
+                            <h3 className="text-sm font-semibold text-main mb-4 uppercase tracking-wider">
                                 Варианты ответов
                             </h3>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {question.options.map((option, index) => {
                                     const isCorrect = question.correct_answers?.includes(String(index));
                                     return (
                                         <div
                                             key={index}
-                                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm ${
+                                            className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
                                                 isCorrect
-                                                    ? 'border-success/30 bg-success/5'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-bg-card)]'
+                                                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20'
+                                                    : 'border-gray-200 dark:border-gray-700'
                                             }`}
                                         >
-                                            {/* Кастомный чекбокс/радио (только для отображения) */}
-                                            <div className="relative flex items-center justify-center">
-                                                <div
-                                                    className={`w-5 h-5 flex items-center justify-center border-2 transition-all ${
-                                                        question.question_type === 'single_choice' ? 'rounded-full' : 'rounded-md'
-                                                    } ${
-                                                        isCorrect
-                                                            ? 'bg-success-light border-success'
-                                                            : 'border-[var(--color-border)] bg-[var(--color-bg-card)]'
-                                                    }`}
-                                                    style={isCorrect ? {
-                                                        backgroundColor: 'var(--color-success)',
-                                                        borderColor: 'var(--color-success)',
-                                                        opacity: 0.15,
-                                                    } : {}}
-                                                >
-                                                    {isCorrect && (
-                                                        <div className="flex items-center justify-center w-full h-full">
-                                                            {question.question_type === 'single_choice' ? (
-                                                                <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor" style={{ color: 'var(--color-success)' }}>
-                                                                    <circle cx="6" cy="6" r="3" />
-                                                                </svg>
-                                                            ) : (
-                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--color-success)' }}>
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                                                </svg>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                            <div
+                                                className={`relative flex-shrink-0 w-6 h-6 flex items-center justify-center border-2 ${
+                                                    question.question_type === 'single_choice' ? 'rounded-full' : 'rounded-md'
+                                                } ${
+                                                    isCorrect
+                                                        ? 'border-emerald-500 bg-emerald-500'
+                                                        : 'border-gray-300 dark:border-gray-600'
+                                                }`}
+                                            >
+                                                {isCorrect && (
+                                                    question.question_type === 'single_choice' ? (
+                                                        <div className="w-3 h-3 bg-white rounded-full" />
+                                                    ) : (
+                                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    )
+                                                )}
                                             </div>
-
-                                            <span className="flex-1 text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                                                {option.text}
-                                            </span>
-
+                                            <span className="flex-1 text-sm text-main">{option.text}</span>
                                             {isCorrect && (
-                                                <span className="text-xs font-medium px-2 py-0.5 rounded-full inline-flex items-center gap-1"
-                                                      style={{
-                                                          backgroundColor: 'var(--color-success)',
-                                                          color: '#fff',
-                                                          opacity: 0.9,
-                                                      }}>
+                                                <span className="text-xs font-medium px-3 py-1 rounded-full bg-emerald-500 text-white">
                                                     Правильный
                                                 </span>
                                             )}
@@ -212,18 +208,17 @@ export default function Show({ auth, organization, question, parents }) {
 
                     {/* Пояснение */}
                     {question.explanation && (
-                        <div className="p-4 rounded-xl mt-6" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
-                            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--color-text-secondary)' }}>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                        <div className="p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <h3 className="text-sm font-semibold text-main mb-3 uppercase tracking-wider">
                                 Пояснение
                             </h3>
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-meta">
                                 {question.explanation}
                             </p>
                         </div>
                     )}
+
+                    <TelegramPreview question={question} />
                 </div>
             </div>
 
@@ -232,8 +227,9 @@ export default function Show({ auth, organization, question, parents }) {
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
                 question={question}
-                tasks={parents.data || []}
+                parents={parents.data || parents || []}
                 organization={organization}
+                context={context}
                 onSuccess={handleQuestionEdited}
             />
 
@@ -245,6 +241,48 @@ export default function Show({ auth, organization, question, parents }) {
                 message="Вы действительно хотите удалить этот вопрос? Это действие нельзя отменить."
                 processing={isDeleting}
             />
+
+            {/* Лайтбокс для просмотра изображения */}
+            {lightboxImage && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                    onClick={() => setLightboxImage(null)}
+                >
+                    <div className="relative max-w-5xl max-h-full">
+                        <button
+                            onClick={() => setLightboxImage(null)}
+                            className="absolute top-3 right-3 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition"
+                            aria-label="Закрыть"
+                        >
+                            ✕
+                        </button>
+                        <img
+                            src={lightboxImage.url}
+                            alt={lightboxImage.name}
+                            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl border-2 border-white/10"
+                        />
+                    </div>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.5s ease-out;
+                }
+            `}</style>
         </ConsoleLayout>
+    );
+}
+
+function MetaBadge({ label, value }) {
+    return (
+        <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
+            <span>{label}:</span>
+            <span className="font-semibold text-main">{value}</span>
+        </div>
     );
 }

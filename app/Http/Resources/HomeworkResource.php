@@ -17,6 +17,7 @@ class HomeworkResource extends JsonResource
             'max_score' => $this->max_score,
             'lesson_id' => $this->lesson_id,
             'is_active' => $this->is_active,
+            'max_attempts' => $this->max_attempts,
 
             'questions' => QuestionResource::collection($this->whenLoaded('questions')),
             'questions_count' => $this->whenCounted('questions'),

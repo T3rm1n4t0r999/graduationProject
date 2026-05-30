@@ -6,7 +6,7 @@ import { Fragment } from 'react';
 export default function CreateInvitationForm({ isOpen, onClose, onSuccess, organizationId }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
-        type: 'student',
+        type: '',
         expires_at: '',
         limited: true,
         organization_id: organizationId,
@@ -79,10 +79,11 @@ export default function CreateInvitationForm({ isOpen, onClose, onSuccess, organ
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-main">Роль *</label>
                                         <select
-                                            value={data.type}
+                                            value={data.type || ''}
                                             onChange={(e) => setData('type', e.target.value)}
                                             className="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-main shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                         >
+                                            <option value="" disabled>Выберите роль</option>
                                             {bot && <option value="student">Ученик</option>}
                                             <option value="teacher">Учитель</option>
                                             <option value="manager">Менеджер</option>

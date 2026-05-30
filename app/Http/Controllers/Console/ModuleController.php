@@ -14,6 +14,7 @@ use App\Models\Course;
 use App\Models\Module;
 use App\Models\Organization;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -26,22 +27,72 @@ class ModuleController extends Controller
      * @return Response
      * @throws AuthorizationException
      */
-    public function index(Organization $organization)
+    public function index(Organization $organization, Request $request)
     {
         $this->authorize('consoleAction', $organization);
 
+        $filters = $request->validate([
+            'search'      => 'nullable|string|max:255',
+            'course_id'   => 'nullable|integer|exists:courses,id',
+            'is_active'   => 'nullable|boolean',
+            'date_from'   => 'nullable|date',
+            'date_to'     => 'nullable|date|after_or_equal:date_from',
+            'min_lessons' => 'nullable|integer|min:0',
+            'max_lessons' => 'nullable|integer|min:0',
+            'sort'        => 'nullable|string|in:order,title,course_title,created_at,lessons_count',
+            'direction'   => 'nullable|string|in:asc,desc',
+        ]);
+
         $modules = $organization->modules()
-            ->orderBy('order')
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = strtolower($request->search);
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                });
+            })
+            ->when($request->filled('course_id'), function ($q) use ($request) {
+                $q->where('course_id', $request->course_id);
+            })
+            ->when(isset($filters['is_active']), function ($q) use ($filters) {
+                $q->where('is_active', $filters['is_active']);
+            })
+            ->when($request->filled('date_from'), function ($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->date_from);
+            })
+            ->when($request->filled('date_to'), function ($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->date_to);
+            })
             ->withCount('lessons')
+            ->when($request->filled('min_lessons'), function ($q) use ($request) {
+                $q->has('lessons', '>=', $request->min_lessons);
+            })
+            ->when($request->filled('max_lessons'), function ($q) use ($request) {
+                $q->has('lessons', '<=', $request->max_lessons);
+            })
+            ->when($request->filled('sort'), function ($q) use ($request) {
+                $direction = $request->direction ?? 'asc';
+                if ($request->sort === 'course_title') {
+                    $q->join('courses', 'modules.course_id', '=', 'courses.id')
+                        ->orderBy('courses.title', $direction)
+                        ->select('modules.*');
+                } elseif ($request->sort === 'lessons_count') {
+                    $q->orderBy('lessons_count', $direction);
+                } else {
+                    $q->orderBy($request->sort, $direction);
+                }
+            }, function ($q) {
+                $q->orderBy('order');
+            })
             ->get();
 
-        $courses = $organization->courses()->get();
+        $courses = $organization->courses()->orderBy('title')->get();
 
-        $modules->loadCount('lessons');
         return Inertia::render('Console/Module/List', [
             'organization' => new OrganizationResource($organization),
-            'courses'       => CourseResource::collection($courses),
+            'courses'      => CourseResource::collection($courses),
             'modules'      => ModuleResource::collection($modules),
+            'filters'      => $filters,
         ]);
     }
 
@@ -53,6 +104,8 @@ class ModuleController extends Controller
         $module->load(['lessons' => function ($query) {
             $query->orderBy('order');
         }]);
+
+        $module->load('exam');
 
         $courses = $organization->courses()->get();
         return Inertia::render('Console/Module/Show', [

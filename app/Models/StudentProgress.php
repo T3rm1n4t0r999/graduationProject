@@ -21,7 +21,9 @@ class StudentProgress extends Model
         'max_points',
         'metadata',
         'attempt',
-        'organization_id'
+        'organization_id',
+        'checked',
+        'checked_by'
     ];
 
     protected $casts = [
@@ -31,6 +33,7 @@ class StudentProgress extends Model
         'points' => 'integer',
         'max_points' => 'integer',
         'attempt' => 'integer',
+        'checked' => 'boolean',
     ];
 
     protected $attributes = [
@@ -41,6 +44,15 @@ class StudentProgress extends Model
 
     public function organization(): BelongsTo{
         return $this->belongsTo(Organization::class);
+    }
+
+    public function progressable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    public function checkedBy(): BelongsTo{
+        return $this->belongsTo(User::class, 'checked_by');
     }
 
     public function student(): BelongsTo
@@ -71,6 +83,26 @@ class StudentProgress extends Model
                     $model->progressable_type,
                     $model->progressable_id
                 );
+            }
+        });
+
+        static::updated(function (StudentProgress $progress) {
+            if (!$progress->checked) {
+                return;
+            }
+
+            $oldPoints = (int) $progress->getOriginal('points');
+            $newPoints = (int) $progress->points;
+            $diffPoints = $newPoints - $oldPoints;
+
+            $progress->student?->increment('score',  $diffPoints);
+            $progress->saveQuietly();
+        });
+
+
+        static::deleted(function (StudentProgress $progress) {
+            if ($progress->checked && ($progress->metadata['points_awarded'] ?? false)) {
+                $progress->student?->decrement('score', $progress->points);
             }
         });
     }

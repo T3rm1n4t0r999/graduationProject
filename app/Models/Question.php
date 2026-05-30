@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Log;
 
 class Question extends Model
@@ -34,6 +36,7 @@ class Question extends Model
         'metadata' => 'array',
         'points' => 'integer',
         'order' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     protected $attributes = [
@@ -43,6 +46,27 @@ class Question extends Model
 
     public function organization(): BelongsTo{
         return $this->belongsTo(Organization::class);
+    }
+
+    public function imageFile(): MorphOne
+    {
+        return $this->morphOne(File::class, 'fileable')->where('mime_type', 'LIKE', 'image/%');
+    }
+
+    public function getImageAttribute(): ?File
+    {
+        return $this->imageFile()->first();
+    }
+
+// app/Models/Question.php
+    public function files(): MorphMany
+    {
+        return $this->morphMany(File::class, 'fileable');
+    }
+
+    public function getMorphClass(): string
+    {
+        return 'Question';
     }
 
     public function questionable(): MorphTo
@@ -113,7 +137,8 @@ class Question extends Model
      */
     protected static function updateParentMaxScore(string $type, int $id): void
     {
-        $parent = $type::find($id);
+        $modelClass = Relation::getMorphedModel($type) ?: $type;
+        $parent = $modelClass::find($id);
         if ($parent && method_exists($parent, 'recalculateMaxScore')) {
             $parent->recalculateMaxScore();
         }

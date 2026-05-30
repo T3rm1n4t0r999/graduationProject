@@ -5,6 +5,7 @@ namespace App\Enums;
 enum OrganizationRole: string
 {
     case Teacher = 'teacher';
+
     case Student = 'student';
     case Manager = 'manager';
     case Owner = 'owner';

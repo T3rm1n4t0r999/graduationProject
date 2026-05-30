@@ -12,12 +12,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('student_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
-            $table->string('granted_by')->default('admin');
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
             $table->timestamp('granted_at')->useCurrent();
-
+            $table->string('granted_by')->default('admin');
             $table->index('organization_id');
             $table->unique(['student_id', 'course_id']);
         });

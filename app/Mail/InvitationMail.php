@@ -38,7 +38,7 @@ class InvitationMail extends Mailable
                     'organizationName' => $this->invitation->organization->name,
                     'token'            => $this->invitation->token,
                     'expiresAt'        => $this->invitation->expires_at->format('d.m.Y H:i'),
-                    'botUrl'           => $bot?->bot_url,
+                    'botUrl' => 'https://t.me/' . ltrim($bot?->bot_url, '@'),
                 ],
             );
         }

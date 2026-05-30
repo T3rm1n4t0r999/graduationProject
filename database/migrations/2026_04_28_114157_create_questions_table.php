@@ -15,13 +15,12 @@ return new class extends Migration
                 'single_choice',
                 'multiple_choice',
                 'text',
-                'code',
-                'file'
+                'free_text',
             ])->default('text');
             $table->json('options')->nullable();
             $table->json('correct_answers')->nullable();
             $table->integer('points')->default(1);
-            $table->integer('order')->default(0);
+            $table->integer('order')->default(1);
 
             // Полиморфные поля
             $table->unsignedBigInteger('questionable_id');

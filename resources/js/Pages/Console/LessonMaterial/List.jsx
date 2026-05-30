@@ -2,43 +2,7 @@ import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import CreateMaterialForm from "@/Pages/Console/LessonMaterial/CreateMaterialForm.jsx";
-
-function MaterialCard({ material, organization }) {
-    return (
-        <Link
-            href={route('material.show', {
-                organization: organization.id,
-                material: material.id,
-            })}
-            className="glass-card p-6 hover:shadow-md transition-shadow flex flex-col justify-between group"
-        >
-            <div>
-                <h3
-                    className="text-lg font-semibold mb-2 group-hover:underline"
-                    style={{ color: 'var(--color-text-primary)' }}
-                >
-                    {material.title}
-                </h3>
-            </div>
-            <div
-                className="mt-4 pt-4 border-t flex items-center justify-between text-xs"
-                style={{ borderColor: 'var(--color-border)' }}
-            >
-                <span className="flex items-center gap-1" style={{ color: 'var(--color-primary)' }}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 5l7 7-7 7"
-                        />
-                    </svg>
-                    Подробнее
-                </span>
-            </div>
-        </Link>
-    );
-}
+import MaterialCard from "@/Pages/Console/LessonMaterial/MaterialCard.jsx";
 
 export default function List({ auth, organization, materials, lessons }) {
     const [isCreateMaterialModalOpen, setIsCreateMaterialModalOpen] = useState(false);
@@ -49,30 +13,41 @@ export default function List({ auth, organization, materials, lessons }) {
     };
 
     return (
-        <ConsoleLayout
-            auth={auth}
-            organization={organization}
-            header={
-                <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                    Материалы
-                </h1>
-            }
-        >
-            <div className="max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-                    <button onClick={() => setIsCreateMaterialModalOpen(true)} className="btn-primary">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Создать материал
-                    </button>
+        <ConsoleLayout auth={auth} organization={organization}>
+            <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
+                {/* Заголовок */}
+                <div className="glass-card p-6 md:p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div
+                                className="hidden sm:flex items-center justify-center w-12 h-12 rounded-xl"
+                                style={{
+                                    background: 'var(--color-accent-sky-light)',
+                                    color: 'var(--color-accent-sky)',
+                                }}
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                                          d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-bold text-main">Материалы</h1>
+                                <p className="text-meta mt-1">
+                                    Всего: <span className="font-semibold text-main">{materials.total ?? materials.data.length}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsCreateMaterialModalOpen(true)} className="btn-primary flex items-center gap-2">
+                            + Создать материал
+                        </button>
+                    </div>
                 </div>
 
+                {/* Список материалов */}
                 {materials.data.length === 0 ? (
-                    <div className="glass-card p-12 text-center">
-                        <p className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>
-                            Пока нет ни одного материала.
-                        </p>
+                    <div className="glass-card p-12 text-center text-meta">
+                        Пока нет ни одного материала.
                     </div>
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -90,6 +65,16 @@ export default function List({ auth, organization, materials, lessons }) {
                 lessons={lessons.data}
                 onSuccess={handleMaterialCreated}
             />
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.5s ease-out;
+                }
+            `}</style>
         </ConsoleLayout>
     );
 }

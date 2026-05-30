@@ -12,6 +12,7 @@ class ModuleStoreRequest extends FormRequest
             'title' => ['required', 'string', 'max:20'],
             'description' => ['nullable', 'string', 'max:200'],
             'course_id' => ['required', 'integer', 'exists:courses,id'],
+            'is_active' => ['boolean', 'required'],
         ];
     }
 }

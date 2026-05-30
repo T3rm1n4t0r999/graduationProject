@@ -67,11 +67,7 @@ class File extends Model
             return '';
         }
 
-        try {
-            return \Storage::disk($this->disk)->url($this->path);
-        } catch (\Exception $e) {
-            return '';
-        }
+        return \Storage::disk($this->disk)->url($this->path);
     }
 
     /**

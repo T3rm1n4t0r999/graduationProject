@@ -22,6 +22,8 @@ class LessonResource extends JsonResource
             'tasks_count'  => $this->whenCounted('tasks'),
             'materials'        => LessonMaterialResource::collection($this->whenLoaded('materials')),
             'materials_count'  => $this->whenCounted('materials'),
+
+            'homework' => new HomeworkResource($this->whenLoaded('homework')),
         ];
     }
 }

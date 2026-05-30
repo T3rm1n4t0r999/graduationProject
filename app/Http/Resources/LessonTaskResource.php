@@ -17,6 +17,8 @@ class LessonTaskResource extends JsonResource
             'max_score' => $this->max_score,
             'lesson_id' => $this->lesson_id,
             'description' => $this->description,
+            'max_attempts' => $this->max_attempts,
+
             'questions'        => QuestionResource::collection($this->whenLoaded('questions')),
             'questions_count'  => $this->whenCounted('questions'),
         ];

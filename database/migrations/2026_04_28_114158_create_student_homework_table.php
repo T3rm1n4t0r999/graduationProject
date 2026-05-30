@@ -8,14 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('student_homework', function (Blueprint $table) {
+        Schema::create('student_homeworks', function (Blueprint $table) {
             $table->id();
             $table->foreignId('homework_id')->constrained('homeworks')->cascadeOnDelete();
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
+            $table->timestamp('granted_at')->useCurrent();
+            $table->string('granted_by')->default('admin');
             $table->timestamps();
+
+
 
             $table->unique(['homework_id', 'student_id']);
             $table->index('organization_id');
@@ -26,6 +30,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('student_homework');
+        Schema::dropIfExists('student_homeworks');
     }
 };

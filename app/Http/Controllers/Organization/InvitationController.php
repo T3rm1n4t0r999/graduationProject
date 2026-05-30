@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Organization;
 
+use App\Enums\OrganizationRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Invitation\GroupInvitationStoreRequest;
 use App\Http\Requests\Invitation\InvitationStoreRequest;
 use App\Mail\InvitationMail;
+use App\Models\Group;
 use App\Models\Invitation;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,28 +20,11 @@ use Illuminate\Support\Str;
 class InvitationController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      */
     public function store(InvitationStoreRequest $request)
     {
         $validated = $request->validated();
-
         if (empty($validated['expires_at'])) {
             $validated['expires_at'] = now()->addDays(7);
         }
@@ -49,7 +36,7 @@ class InvitationController extends Controller
                     'organization_id' => $validated['organization_id'],
                     'type'            => $validated['type'],
                     'status'          => 'pending',
-                    'token'           => Str::random(32),
+                    'token'           => Str::random(16),
                     'expires_at'      => $validated['expires_at'],
                     'limited'         => $validated['limited'] ?? false,
                 ]);
@@ -65,28 +52,26 @@ class InvitationController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function storeForGroup(GroupInvitationStoreRequest $request, Organization $organization, Group $group)
     {
-        //
-    }
+        $this->authorize('consoleAction', $organization);
+        abort_unless($group->organization_id === $organization->id, 404);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        $validated = $request->validated();
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
+        $invitation = Invitation::create([
+            'organization_id' => $organization->id,
+            'group_id'        => $group->id,
+            'type'            => OrganizationRole::Student,
+            'sender_id'       => auth()->id(),
+            'token'           => Str::random(16),
+            'limited'         => $validated['limited'],
+            'expires_at'      => $validated['expires_at'] ?? now()->addDays(7),
+            'email'           => $validated['email'],
+            'status'          => 'pending',
+        ]);
+
+        return back()->with('success', 'Приглашение в группу создано. Токен: ' . $invitation->token);
     }
 
     /**

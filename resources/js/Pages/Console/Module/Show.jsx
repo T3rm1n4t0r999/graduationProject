@@ -1,16 +1,18 @@
-// resources/js/Pages/Console/Modules/Show.jsx
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
-import { Link, router, usePage } from '@inertiajs/react';
-import EditModuleForm from '@/Pages/Console/Module/EditModuleForm';
+import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import ConfirmDeleteModal from "@/Components/ConfirmDeleteModal.jsx";
-import SortableModules from "@/Pages/Console/Course/SortableModuleItem.jsx";
-import SortableLessons from "@/Pages/Console/Module/SortableLessonItem.jsx";
+import EditModuleForm from '@/Pages/Console/Module/EditModuleForm';
+import SortableLessons from "@/Pages/Console/Lesson/SortableLessons.jsx";
+import CreateExamForm from '@/Pages/Console/Exam/CreateExamForm';
+import CreateLessonForm from "@/Pages/Console/Lesson/CreateLessonForm.jsx";
 
 export default function Show({ auth, organization, module, courses }) {
     const [isEditModuleModalOpen, setIsEditModuleModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isCreateExamModalOpen, setIsCreateExamModalOpen] = useState(false);
+    const [isCreateLessonModalOpen, setIsCreateLessonModalOpen] = useState(false);
 
     const handleModuleEdited = () => {
         setIsEditModuleModalOpen(false);
@@ -27,76 +29,161 @@ export default function Show({ auth, organization, module, courses }) {
             {
                 preserveState: false,
                 preserveScroll: false,
-                onSuccess: () => {
-                },
                 onError: () => {
                     setIsDeleting(false);
                     setIsDeleteModalOpen(false);
-                    // можно добавить сообщение об ошибке
                 },
             }
         );
     };
 
+    const handleExamCreated = () => {
+        setIsCreateExamModalOpen(false);
+        router.reload({ only: ['module'], preserveScroll: true });
+    };
+
+    const handleLessonCreated = () => {
+        setIsCreateLessonModalOpen(false);
+        router.reload({ only: ['module'], preserveScroll: true });
+    };
+
+    const parentCourse = courses?.data?.find(c => c.id === module.course_id);
+
     return (
         <ConsoleLayout auth={auth} organization={organization}>
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
                 {/* Хлебные крошки */}
-                <nav className="flex items-center gap-2 text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                <nav className="flex items-center gap-2 text-sm text-meta">
                     <Link
                         href={route('module.index', organization.id)}
-                        className="hover:underline"
+                        className="hover:text-main transition-colors"
                     >
-                        Модули
+                        ← Модули
                     </Link>
                     <span>/</span>
-                    <span style={{ color: 'var(--color-text-primary)' }}>{module.title}</span>
+                    <span className="text-main font-medium truncate">{module.title}</span>
                 </nav>
 
                 {/* Карточка модуля */}
-                <div className="glass-card p-8 mb-8">
-                    <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
-                        <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                            {module.title}
-                        </h1>
-                        <div className="flex gap-3">
+                <div className="glass-card p-6 md:p-8 space-y-8">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-2xl md:text-3xl font-bold text-main truncate">
+                                {module.title}
+                            </h1>
+                            {module.description && (
+                                <p className="text-meta mt-2 line-clamp-6 whitespace-pre-wrap">
+                                    {module.description}
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 self-start">
                             <button
                                 onClick={() => setIsEditModuleModalOpen(true)}
-                                className="btn-primary"
+                                className="btn-primary gap-2"
                             >
-                                Редактировать
+                                ✎ Редактировать
                             </button>
                             <button
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                className="btn-ghost"
-                                style={{ color: 'var(--color-error)' }}
+                                className="btn-ghost gap-2"
+                                style={{ color: 'var(--color-accent-rose)' }}
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Удалить модуль
+                                ✕ Удалить
                             </button>
                         </div>
                     </div>
 
-                    <div className="prose max-w-none mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-                        <p className="whitespace-pre-wrap">
-                            {module.description || 'Описание отсутствует'}
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        <span>Порядковый номер: {module.order}</span>
+                    {/* Мета-информация */}
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                        <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
+                            <span>Порядок:</span>
+                            <span className="font-semibold text-main">{module.order}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
+                            <span>Уроков:</span>
+                            <span className="font-semibold text-main">{module.lessons?.length ?? 0}</span>
+                        </div>
+                        {parentCourse && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-sm text-meta">Курс:</span>
+                                <Link
+                                    href={route('course.show', {
+                                        organization: organization.id,
+                                        course: parentCourse.id,
+                                    })}
+                                    className="badge hover:underline"
+                                >
+                                    {parentCourse.title}
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Уроки модуля */}
-                <div className="glass-card p-8">
-                    <SortableLessons
-                        lessons={module.lessons}
-                        organization={organization.id}
-                        module={module.id}
-                    />
+                {/* Уроки */}
+                <div className="glass-card p-6 md:p-8">
+                    {module?.lessons && module.lessons.length > 0 ? (
+                        <SortableLessons
+                            lessons={module.lessons}
+                            module={module}
+                            organization={organization}
+                        />
+                    ) : (
+                        <div className="text-center py-10">
+                            <p className="text-meta mb-4">В этом модуле пока нет уроков.</p>
+                            <button
+                                onClick={() => setIsCreateLessonModalOpen(true)}
+                                className="btn-primary"
+                            >
+                                + Создать урок
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Контрольная работа */}
+                <div className="glass-card p-6 md:p-8">
+                    <h2 className="text-lg font-semibold text-main mb-6">Контрольная работа</h2>
+                    {module.exam ? (
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-xl border border-gray-100 dark:border-gray-700/60">
+                            <div className="min-w-0">
+                                <h3 className="text-base font-semibold text-main truncate">{module.exam.title}</h3>
+                                <div className="flex flex-wrap gap-3 mt-2 text-sm text-meta">
+                                    <span className="bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1">
+                                        Баллы: <span className="font-medium text-main">{module.exam.max_score ?? 0}</span>
+                                    </span>
+                                    <span className="bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1">
+                                        Вопросов: <span className="font-medium text-main">{module.exam.questions?.length ?? 0}</span>
+                                    </span>
+                                    {module.exam.time_limit && (
+                                        <span className="bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1">
+                                            Время: <span className="font-medium text-main">{module.exam.time_limit} мин</span>
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <Link
+                                href={route('exam.show', {
+                                    organization: organization.id,
+                                    exam: module.exam.id,
+                                })}
+                                className="btn-primary gap-2 self-start"
+                            >
+                                Просмотреть →
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="text-center py-10">
+                            <p className="text-meta mb-4">Контрольная работа ещё не создана.</p>
+                            <button
+                                onClick={() => setIsCreateExamModalOpen(true)}
+                                className="btn-primary"
+                            >
+                                + Создать КР
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -109,15 +196,38 @@ export default function Show({ auth, organization, module, courses }) {
                 organization={organization}
                 onSuccess={handleModuleEdited}
             />
-
+            <CreateLessonForm
+                isOpen={isCreateLessonModalOpen}
+                onClose={() => setIsCreateLessonModalOpen(false)}
+                module={module}
+                organization={organization}
+                onSuccess={handleLessonCreated}
+            />
             <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDelete}
-                title="Удаление курса"
-                message={`Вы действительно хотите удалить курс «${module.title}»? Все модули и уроки внутри курса также будут удалены. Это действие нельзя отменить.`}
+                title="Удаление модуля"
+                message={`Вы действительно хотите удалить модуль «${module.title}»? Все уроки и материалы внутри будут удалены. Это действие необратимо.`}
                 processing={isDeleting}
             />
+            <CreateExamForm
+                isOpen={isCreateExamModalOpen}
+                onClose={() => setIsCreateExamModalOpen(false)}
+                organization={organization}
+                module={module}
+                onSuccess={handleExamCreated}
+            />
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.5s ease-out;
+                }
+            `}</style>
         </ConsoleLayout>
     );
 }

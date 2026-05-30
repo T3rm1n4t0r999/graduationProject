@@ -96,7 +96,7 @@ class OrganizationController extends Controller
             ->withQueryString();
 
         $bot = $organization->bot;
-        $invitations = $organization->invitations;
+        $invitations = $organization->invitations()->with('group')->latest()->get();
         $user = Auth::user();
         return Inertia::render('Organization/Show', [
             'organization' => new OrganizationResource($organization),

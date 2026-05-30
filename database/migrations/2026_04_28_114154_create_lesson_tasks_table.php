@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('lesson_id')
                 ->constrained('lessons')
                 ->cascadeOnDelete();
+            $table->integer('max_attempts')->default(0);
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();

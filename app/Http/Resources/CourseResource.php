@@ -16,6 +16,7 @@ class CourseResource extends JsonResource
             'is_active' => $this->is_active,
             'order' => $this->order,
             'description' => $this->description,
+            'auto_assign' => $this->auto_assign,
             'modules'       => ModuleResource::collection($this->whenLoaded('modules')),
             'modules_count' => $this->whenCounted('modules'),
         ];

@@ -1,18 +1,24 @@
-// resources/js/Pages/Console/Courses/Show.jsx
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
-import { Link, router, usePage } from '@inertiajs/react';
-import EditCourseForm from '@/Pages/Console/Course/EditCourseForm';
+import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import ConfirmDeleteModal from "@/Components/ConfirmDeleteModal.jsx";
-import SortableModules from "@/Pages/Console/Course/SortableModuleItem.jsx";
+import EditCourseForm from "@/Pages/Console/Course/EditCourseForm.jsx";
+import SortableModules from "@/Pages/Console/Module/SortableModules.jsx";
+import CreateModuleForm from "@/Pages/Console/Module/CreateModuleForm.jsx";
 
-export default function Show({ auth, organization, course, modules }) {
-    const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
+export default function Show({ auth, organization, course }) {
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isCreateModuleModalOpen, setIsCreateModuleModalOpen] = useState(false);
+
+    const handleModuleCreated = () => {
+        setIsCreateModuleModalOpen(false);
+        router.reload({ only: ['modules'], preserveScroll: true });
+    };
 
     const handleCourseEdited = () => {
-        setIsEditCourseModalOpen(false);
+        setIsEditModalOpen(false);
         router.reload({ only: ['course'], preserveScroll: true });
     };
 
@@ -26,16 +32,9 @@ export default function Show({ auth, organization, course, modules }) {
             {
                 preserveState: false,
                 preserveScroll: false,
-                onSuccess: () => {
-                    // После успешного удаления перенаправляем на список курсов
-                    router.visit(
-                        route('course.index', { organization: organization.id })
-                    );
-                },
                 onError: () => {
                     setIsDeleting(false);
                     setIsDeleteModalOpen(false);
-                    // можно добавить сообщение об ошибке
                 },
             }
         );
@@ -43,83 +42,137 @@ export default function Show({ auth, organization, course, modules }) {
 
     return (
         <ConsoleLayout auth={auth} organization={organization}>
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
                 {/* Хлебные крошки */}
-                <nav className="flex items-center gap-2 text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                <nav className="flex items-center gap-2 text-sm text-meta">
                     <Link
                         href={route('course.index', organization.id)}
-                        className="hover:underline"
+                        className="hover:text-main transition-colors"
                     >
-                        Курсы
+                        ← Курсы
                     </Link>
                     <span>/</span>
-                    <span style={{ color: 'var(--color-text-primary)' }}>{course.title}</span>
+                    <span className="text-main font-medium truncate">{course.title}</span>
                 </nav>
 
                 {/* Карточка курса */}
-                <div className="glass-card p-8 mb-8">
-                    <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
-                        <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                            {course.title}
-                        </h1>
-                        <div className="flex gap-3">
+                <div className="glass-card p-6 md:p-8 space-y-8">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-2xl md:text-3xl font-bold text-main truncate">
+                                {course.title}
+                            </h1>
+                            {course.description && (
+                                <p className="text-meta mt-2 line-clamp-6 whitespace-pre-wrap">
+                                    {course.description}
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 self-start">
                             <button
-                                onClick={() => setIsEditCourseModalOpen(true)}
-                                className="btn-primary"
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="btn-primary gap-2"
                             >
-                                Редактировать
+                                ✎ Редактировать
                             </button>
                             <button
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                className="btn-ghost"
-                                style={{ color: 'var(--color-error)' }}
+                                className="btn-ghost gap-2"
+                                style={{ color: 'var(--color-accent-rose)' }}
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Удалить курс
+                                ✕ Удалить
                             </button>
                         </div>
                     </div>
 
-                    <div className="prose max-w-none mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-                        <p className="whitespace-pre-wrap">
-                            {course.description || 'Описание отсутствует'}
-                        </p>
-                    </div>
+                    {/* Мета-информация */}
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                        <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
+                            <span>Порядок:</span>
+                            <span className="font-semibold text-main">{course.order}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
+                            <span>Модулей:</span>
+                            <span className="font-semibold text-main">{course?.modules?.length ?? 0}</span>
+                        </div>
 
-                    <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        <span>Порядковый номер: {course.order}</span>
+                        {/* Статус активности */}
+                        <div
+                            className={`flex items-center gap-1.5 text-sm rounded-lg px-3 py-1.5 ${
+                                course.is_active
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-gray-100 dark:bg-gray-800/50 text-meta'
+                            }`}
+                        >
+                            <span className={`w-1.5 h-1.5 rounded-full ${course.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                            <span>{course.is_active ? 'Активен' : 'Неактивен'}</span>
+                        </div>
+
+                        {/* Статус автоназначения */}
+                        {course.auto_assign && (
+                            <div className="flex items-center gap-1 text-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg px-3 py-1.5">
+                                <span>Автоназначение</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* Модули курса */}
-                <div className="glass-card p-8">
-                    <SortableModules
-                        modules={modules.data}
-                        organization={organization.id}
-                        course={course.id}
-                    />
+                <div className="glass-card p-6 md:p-8">
+                    {course?.modules && course.modules.length > 0 ? (
+                        <SortableModules
+                            modules={course.modules}
+                            organizationId={organization.id}
+                        />
+                    ) : (
+                        <div className="text-center py-10">
+                            <p className="text-meta mb-4">В этом курсе пока нет модулей.</p>
+                            <button
+                                onClick={() => setIsCreateModuleModalOpen(true)}
+                                className="btn-primary"
+                            >
+                                + Создать модуль
+                            </button>
+                        </div>
+                    )}
                 </div>
+
+                {/* Модальные окна */}
+                <EditCourseForm
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    course={course}
+                    organization={organization}
+                    onSuccess={handleCourseEdited}
+                />
+
+                <ConfirmDeleteModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    onConfirm={handleDelete}
+                    title="Удаление курса"
+                    message={`Вы действительно хотите удалить курс «${course.title}»? Все модули и уроки внутри будут удалены. Это действие необратимо.`}
+                    processing={isDeleting}
+                />
+
+                <CreateModuleForm
+                    isOpen={isCreateModuleModalOpen}
+                    onClose={() => setIsCreateModuleModalOpen(false)}
+                    organization={organization}
+                    course={course}
+                    onSuccess={handleModuleCreated}
+                />
             </div>
 
-            {/* Модальные окна */}
-            <EditCourseForm
-                isOpen={isEditCourseModalOpen}
-                onClose={() => setIsEditCourseModalOpen(false)}
-                course={course}
-                organization={organization}
-                onSuccess={handleCourseEdited}
-            />
-
-            <ConfirmDeleteModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={handleDelete}
-                title="Удаление курса"
-                message={`Вы действительно хотите удалить курс «${course.title}»? Все модули и уроки внутри курса также будут удалены. Это действие нельзя отменить.`}
-                processing={isDeleting}
-            />
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.5s ease-out;
+                }
+            `}</style>
         </ConsoleLayout>
     );
 }

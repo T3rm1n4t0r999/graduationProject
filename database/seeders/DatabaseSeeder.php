@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Bot;
+use App\Models\Invitation;
 use App\Models\Organization;
+use App\Models\OrganizationUser;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -18,7 +20,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1️⃣ Сначала создаём пользователей
+
         User::create([
             'name' => 'Super Admin',
             'email' => 'admin@example.com',
@@ -26,42 +28,35 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
-//        $users = User::factory()->count(10)->create();
+        Organization::create([
+            'name' => 'Super Admin',
+            'owner_id' => 1,
+            'email' => 'admin@example.com',
+            'email_verified_at' => now(),
+            'status' => 'active',
+        ]);
 
-//        // 2️⃣ Создаём организации и заполняем pivot organization_user
-//        $organizations = Organization::factory()
-//            ->count(5)
-//            ->create()
-//            ->each(function ($org) use ($users) {
-//                $owner = $users->random();
-//
-//                $org->users()->attach($owner->id, [
-//                    'role' => 'owner',
-//                    'is_active' => true,
-//                    'joined_at' => now(),
-//                    'invited_at' => now(),
-//                ]);
-//
-//                // Добавляем 1-3 случайных сотрудников
-//                $members = $users->where('id', '!=', $owner->id)->random(rand(1, 3));
-//
-//                foreach ($members as $member) {
-//                    $org->users()->attach($member->id, [
-//                        'role' => fake()->randomElement(['admin', 'manager', 'member']),
-//                        'is_active' => fake()->boolean(90), // 90% активных
-//                        'joined_at' => now()->subDays(rand(1, 30)),
-//                        'invited_at' => now()->subDays(rand(35, 40)),
-//                    ]);
-//                }
-//            });
-//
-//        // 3️⃣ Создаём ботов для каждой организации
-//        $organizations->each(function ($org) {
-//            Bot::factory()
-//                ->count(rand(1, 3))
-//                ->create([
-//                    'organization_id' => $org->id,
-//                ]);
-//        });
+        OrganizationUser::create([
+            'organization_id' => 1,
+            'user_id' => 1,
+            'role' => 'owner',
+            'is_active' => true,
+        ]);
+
+        Bot::create([
+            'name' => 'Super Admin',
+            'bot_url' => '@online_ege_school_bot',
+            'token' => '7830450993:AAHIx2gzOr_2ZFjUGg-HR-o0Ofh5BUkNgiQ',
+            'organization_id' => 1,
+        ]);
+
+        Invitation::create([
+            'organization_id' => 1,
+            'sender_id' => 1,
+            'email' => 'admin@example.com',
+            'type' => 'student',
+            'token'=>'123',
+            'expires_at' => now()->addDays(30),
+        ]);
     }
 }

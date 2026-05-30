@@ -18,6 +18,11 @@ class Course extends Model
         'organization_id',
         'order',
         'is_active',
+        'auto_assign'
+    ];
+
+    protected $casts = [
+        'auto_assign' => 'boolean',
     ];
 
     public function modules(): HasMany{

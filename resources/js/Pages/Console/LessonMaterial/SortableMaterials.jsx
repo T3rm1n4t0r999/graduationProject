@@ -1,11 +1,9 @@
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import {SortableContext, verticalListSortingStrategy, arrayMove, rectSortingStrategy} from "@dnd-kit/sortable";
-import {Link, router, usePage} from "@inertiajs/react";
+import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { router } from "@inertiajs/react";
 import { useState } from "react";
-import SortableMaterialCard from "@/Pages/Console/Lesson/SortableMaterialCard.jsx";
+import SortableMaterialCard from "@/Pages/Console/LessonMaterial/SortableMaterialCard.jsx";
 import CreateMaterialForm from "@/Pages/Console/LessonMaterial/CreateMaterialForm.jsx";
-
-
 
 export default function SortableMaterials({ materials, organization, lesson }) {
     const [isMaterialReordering, setIsMaterialReordering] = useState(false);
@@ -60,30 +58,23 @@ export default function SortableMaterials({ materials, organization, lesson }) {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
+            {/* Заголовок и кнопки управления */}
+            <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        Материалы
-                    </h2>
-                    <span className="text-sm px-3 py-1 rounded-full" style={{ background: 'var(--color-bg-card-hover)', color: 'var(--color-text-muted)' }}>
-                        {materials.length || 0} шт.
-                    </span>
+                    <h2 className="text-xl font-semibold text-main">Материалы</h2>
+                    <span className="badge">{materials.length || 0} шт.</span>
                 </div>
                 <div className="flex gap-2">
-
                     {!isMaterialReordering ? (
                         <>
-                            <button onClick={() => setIsCreateMaterialModalOpen(true)} className="btn-primary">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Создать материал
+                            <button
+                                onClick={() => setIsCreateMaterialModalOpen(true)}
+                                className="btn-primary flex items-center gap-2"
+                            >
+                                + Создать материал
                             </button>
                             <button onClick={startReordering} className="btn-ghost text-sm">
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                </svg>
-                                Изменить порядок
+                                ⇅ Изменить порядок
                             </button>
                         </>
                     ) : (
@@ -95,24 +86,18 @@ export default function SortableMaterials({ materials, organization, lesson }) {
                 </div>
             </div>
 
+            {/* Список материалов */}
             {materials.length === 0 ? (
-                <p style={{ color: 'var(--color-text-muted)' }}>Модулей пока нет.</p>
+                <p className="text-meta text-center py-8">Материалов пока нет.</p>
             ) : !isMaterialReordering ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {materials.map(material => (
-                        <Link
+                        <SortableMaterialCard
                             key={material.id}
-                            href={route('material.show', {
-                                organization: organization.id,
-                                material: material.id,
-                            })}
-                            className="block"
-                        >
-                            <SortableMaterialCard
-                                organization={organization}
-                                material={material}
-                                isReordering={false} />
-                        </Link>
+                            material={material}
+                            organization={organization}
+                            isReordering={isMaterialReordering}
+                        />
                     ))}
                 </div>
             ) : (
@@ -124,7 +109,6 @@ export default function SortableMaterials({ materials, organization, lesson }) {
                                     key={material.id}
                                     material={material}
                                     organization={organization}
-                                    lesson={lesson}
                                     isReordering={isMaterialReordering}
                                 />
                             ))}
@@ -132,6 +116,7 @@ export default function SortableMaterials({ materials, organization, lesson }) {
                     </SortableContext>
                 </DndContext>
             )}
+
             <CreateMaterialForm
                 isOpen={isCreateMaterialModalOpen}
                 onClose={() => setIsCreateMaterialModalOpen(false)}

@@ -12,6 +12,7 @@ class LessonTaskUpdateRequest extends FormRequest
             'title' => ['required', 'string', 'max:20'],
             'description' => ['nullable', 'string', 'max:200'],
             'lesson_id' => ['required', 'integer', 'exists:lessons,id'],
+            'max_attempts' => ['nullable', 'integer'],
         ];
     }
 }

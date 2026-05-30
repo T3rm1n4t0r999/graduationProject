@@ -1,21 +1,20 @@
 import { useForm } from '@inertiajs/react';
-import {Dialog, Transition, Listbox, Switch} from '@headlessui/react';
-import { Fragment, useState } from 'react';
+import { Dialog, Transition, Listbox, Switch } from '@headlessui/react';
+import { Fragment } from 'react';
 
 export default function CreateTaskForm({ isOpen, onClose, onSuccess, organization, lessons = null, lesson = null }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         title: '',
         description: '',
         lesson_id: lesson?.id || '',
-        is_active: false,
+        is_active: true,
+        max_attempts: '',
     });
-    const submit = (e) => {
 
+    const submit = (e) => {
         e.preventDefault();
         post(
-            route('task.store', {
-                organization: organization.id
-            }),
+            route('task.store', { organization: organization.id }),
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -31,8 +30,7 @@ export default function CreateTaskForm({ isOpen, onClose, onSuccess, organizatio
         if (!processing) onClose();
     };
 
-    // Найти выбранный задание для отображения метки
-    const selectedLesson = lessons?.find((c) => c.id == data.lesson_id);
+    const selectedLesson = lessons?.find((l) => l.id == data.lesson_id);
 
     return (
         <Transition appear show={isOpen} as={Fragment}>
@@ -46,11 +44,11 @@ export default function CreateTaskForm({ isOpen, onClose, onSuccess, organizatio
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 bg-black bg-opacity-25 backdrop-blur-sm" />
+                    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" />
                 </Transition.Child>
 
                 <div className="fixed inset-0 overflow-y-auto">
-                    <div className="flex min-h-full items-center justify-center p-4 text-center">
+                    <div className="flex min-h-full items-center justify-center p-4">
                         <Transition.Child
                             as={Fragment}
                             enter="ease-out duration-300"
@@ -60,122 +58,143 @@ export default function CreateTaskForm({ isOpen, onClose, onSuccess, organizatio
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl glass-card p-6 text-left align-middle shadow-xl transition-all relative z-10">
-                                <Dialog.Title as="h3" className="text-lg font-medium text-main mb-4">
-                                    Новое задание
-                                </Dialog.Title>
-
-                                <form onSubmit={submit}>
-                                    {/* Кастомный селект задания */}
-                                    {!lesson && <div className="mb-4">
-                                    <label className="block text-sm font-medium text-main mb-2">
-                                        Урок *
-                                    </label>
-                                    <Listbox
-                                        value={data.lesson_id}
-                                        onChange={(value) => setData('lesson_id', value)}
+                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl glass-card p-6 text-left align-middle shadow-xl transition-all animate-fade-in">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                        style={{
+                                            background: 'var(--color-accent-sky-light)',
+                                            color: 'var(--color-accent-sky)',
+                                        }}
                                     >
-                                        <div className="relative">
-                                            <Listbox.Button
-                                                autoFocus
-                                                className="form-input-glass w-full text-left flex items-center justify-between pr-10"
-                                            >
-                                                    <span className={selectedLesson ? 'text-main' : 'text-meta'}>
-                                                        {selectedLesson ? selectedLesson.title : 'Выберите урок'}
-                                                    </span>
-                                                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                                        <svg className="h-5 w-5 text-meta" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                                                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                    </div>
+                                    <Dialog.Title as="h3" className="text-lg font-semibold text-main">
+                                        Новое задание
+                                    </Dialog.Title>
+                                </div>
+
+                                <form onSubmit={submit} className="space-y-5">
+                                    {/* Выбор урока (если не передан явно) */}
+                                    {!lesson && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-meta mb-1 uppercase tracking-wide">
+                                                Урок *
+                                            </label>
+                                            <Listbox value={data.lesson_id} onChange={(value) => setData('lesson_id', value)}>
+                                                <div className="relative">
+                                                    <Listbox.Button className="form-input-glass w-full text-left flex items-center justify-between pr-10">
+                                                        <span className={selectedLesson ? 'text-main' : 'text-meta'}>
+                                                            {selectedLesson ? selectedLesson.title : 'Выберите урок'}
+                                                        </span>
+                                                        <svg className="absolute right-3 h-5 w-5 text-meta" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
                                                         </svg>
-                                                    </span>
-                                            </Listbox.Button>
-                                            <Transition
-                                                as={Fragment}
-                                                leave="transition ease-in duration-100"
-                                                leaveFrom="opacity-100"
-                                                leaveTo="opacity-0"
-                                            >
-                                                <Listbox.Options className="absolute z-20 mt-2 w-full overflow-auto rounded-xl border shadow-lg focus:outline-none"
-                                                                 style={{
-                                                                     background: 'var(--color-bg-card)',
-                                                                     borderColor: 'var(--color-border)',
-                                                                     backdropFilter: 'blur(16px)',
-                                                                     WebkitBackdropFilter: 'blur(16px)',
-                                                                     maxHeight: '15rem',
-                                                                 }}
-                                                >
-                                                    {lessons?.map((lesson) => (
-                                                        <Listbox.Option
-                                                            key={lesson.id}
-                                                            value={lesson.id}
-                                                            className={({ active, selected }) =>
-                                                                `relative cursor-pointer select-none py-2.5 px-4 text-sm transition-colors ${
-                                                                    active ? 'bg-primary-light' : ''
-                                                                } ${selected ? 'font-medium' : ''}`
-                                                            }
+                                                    </Listbox.Button>
+                                                    <Transition
+                                                        as={Fragment}
+                                                        leave="transition ease-in duration-100"
+                                                        leaveFrom="opacity-100"
+                                                        leaveTo="opacity-0"
+                                                    >
+                                                        <Listbox.Options
+                                                            className="absolute z-20 mt-2 w-full overflow-auto rounded-xl border shadow-lg focus:outline-none"
                                                             style={{
-                                                                color: 'var(--color-text-primary)',
-                                                                background: undefined, // handled by className active
+                                                                background: 'var(--color-bg-card)',
+                                                                borderColor: 'var(--color-border)',
+                                                                backdropFilter: 'blur(16px)',
+                                                                WebkitBackdropFilter: 'blur(16px)',
+                                                                maxHeight: '15rem',
                                                             }}
                                                         >
-                                                            {({ selected }) => (
-                                                                <div className="flex items-center justify-between">
-                                                                        <span className={selected ? 'text-primary font-semibold' : 'text-main'}>
-                                                                            {lesson.title}
-                                                                        </span>
-                                                                    {selected && (
-                                                                        <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                                                        </svg>
+                                                            {lessons?.map((les) => (
+                                                                <Listbox.Option
+                                                                    key={les.id}
+                                                                    value={les.id}
+                                                                    className={({ active, selected }) =>
+                                                                        `relative cursor-pointer select-none py-2.5 px-4 text-sm transition-colors ${
+                                                                            active ? 'bg-primary-light' : ''
+                                                                        } ${selected ? 'font-medium' : ''}`
+                                                                    }
+                                                                    style={{ color: 'var(--color-text-primary)' }}
+                                                                >
+                                                                    {({ selected }) => (
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span>{les.title}</span>
+                                                                            {selected && (
+                                                                                <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </div>
                                                                     )}
-                                                                </div>
-                                                            )}
-                                                        </Listbox.Option>
-                                                    ))}
-                                                </Listbox.Options>
-                                            </Transition>
+                                                                </Listbox.Option>
+                                                            ))}
+                                                        </Listbox.Options>
+                                                    </Transition>
+                                                </div>
+                                            </Listbox>
+                                            {errors.lesson_id && <p className="mt-1 text-sm text-red-500">{errors.lesson_id}</p>}
                                         </div>
-                                    </Listbox>
-                                    {errors.lesson_id && <p className="mt-1 text-sm text-red-500">Поле урока обязательно</p>}
-                                </div>}
+                                    )}
 
                                     {/* Название */}
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-main">Название *</label>
+                                    <div>
+                                        <label className="block text-xs font-medium text-meta mb-1 uppercase tracking-wide">
+                                            Название *
+                                        </label>
                                         <input
                                             type="text"
+                                            autoFocus
                                             value={data.title}
                                             onChange={(e) => setData('title', e.target.value)}
-                                            className="form-input-glass mt-1"
-                                            placeholder="Введение"
+                                            className="form-input-glass"
+                                            placeholder="Введение в тему"
                                         />
                                         {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
                                     </div>
 
                                     {/* Описание */}
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-main">Описание</label>
-                                        <input
-                                            type="text"
+                                    <div>
+                                        <label className="block text-xs font-medium text-meta mb-1 uppercase tracking-wide">
+                                            Описание
+                                        </label>
+                                        <textarea
                                             value={data.description}
                                             onChange={(e) => setData('description', e.target.value)}
-                                            className="form-input-glass mt-1"
-                                            placeholder="Описание задания"
+                                            className="form-input-glass min-h-[80px]"
+                                            placeholder="Краткое описание задания"
                                         />
                                         {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
                                     </div>
 
+                                    {/* Попытки */}
+                                    <div>
+                                        <label className="block text-xs font-medium text-meta mb-1 uppercase tracking-wide">
+                                            Максимальное количество попыток
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={data.max_attempts}
+                                            onChange={(e) => setData('max_attempts', e.target.value)}
+                                            className="form-input-glass min-h-[80px]"
+                                            placeholder="Оставьте пустым для неограниченного количества"
+                                        />
+                                        {errors.max_attempts && <p className="mt-1 text-sm text-red-500">{errors.max_attempts}</p>}
+                                    </div>
 
-                                    {/* Переключатель "Активное задание" */}
-                                    <div className="mb-6 flex items-center justify-between">
+                                    {/* Активность */}
+                                    <div className="flex items-center justify-between py-2">
                                         <span className="text-sm font-medium text-main">Сделать активным</span>
                                         <Switch
                                             checked={data.is_active}
                                             onChange={(value) => setData('is_active', value)}
-                                            style={{
-                                                background: data.is_active ? 'var(--color-primary)' : 'var(--color-text-muted)'
-                                            }}
-                                            className='relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none'
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                                                data.is_active ? 'bg-sky-500' : 'bg-gray-300 dark:bg-gray-600'
+                                            }`}
                                         >
                                             <span
                                                 className={`${
@@ -186,12 +205,22 @@ export default function CreateTaskForm({ isOpen, onClose, onSuccess, organizatio
                                     </div>
 
                                     {/* Кнопки */}
-                                    <div className="flex justify-end gap-3">
+                                    <div className="flex justify-end gap-3 pt-2">
                                         <button type="button" onClick={handleClose} className="btn-ghost" disabled={processing}>
                                             Отмена
                                         </button>
-                                        <button type="submit" disabled={processing} className="btn-primary">
-                                            {processing ? 'Создание...' : 'Создать'}
+                                        <button type="submit" disabled={processing} className="btn-primary flex items-center gap-2">
+                                            {processing ? (
+                                                <>
+                                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                    </svg>
+                                                    Создание...
+                                                </>
+                                            ) : (
+                                                'Создать'
+                                            )}
                                         </button>
                                     </div>
                                 </form>
@@ -200,6 +229,14 @@ export default function CreateTaskForm({ isOpen, onClose, onSuccess, organizatio
                     </div>
                 </div>
             </Dialog>
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+            `}</style>
         </Transition>
     );
 }

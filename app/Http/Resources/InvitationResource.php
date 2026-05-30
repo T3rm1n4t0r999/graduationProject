@@ -21,6 +21,9 @@ class InvitationResource extends JsonResource
             'type' => $this->type,
             'status' => $this->status,
             'email' => $this->email,
+            'group'         => $this->when($this->relationLoaded('group'), function () {
+                return $this->group?->name ?? null;
+            }),
             'expires_at' => new Carbon($this->expires_at)->format('Y-m-d'),
             'accepted_at' => $this->accepted_at ? new Carbon($this->accepted_at)->format('Y-m-d') : null,
             'created_at' => new Carbon($this->created_at)->format('Y-m-d'),

@@ -2,12 +2,16 @@
 
 use App\Http\Controllers\Console\ConsoleController;
 use App\Http\Controllers\Console\CourseController;
+use App\Http\Controllers\Console\ExamController;
+use App\Http\Controllers\Console\GroupController;
 use App\Http\Controllers\Console\HomeworkController;
 use App\Http\Controllers\Console\LessonController;
 use App\Http\Controllers\Console\LessonMaterialController;
 use App\Http\Controllers\Console\LessonTaskController;
 use App\Http\Controllers\Console\ModuleController;
+use App\Http\Controllers\Console\ProgressCheckController;
 use App\Http\Controllers\Console\QuestionController;
+use App\Http\Controllers\Console\StudentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Organization\BotController;
 use App\Http\Controllers\Organization\InvitationController;
@@ -22,12 +26,16 @@ Route::get('/error/{status}', function ($status) {
 })->name('error');
 
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
+Route::get('/guide', function () {
+    return Inertia::render('Guide');
+})->name('guide');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('organization', OrganizationController::class)->except( 'verifyEmail', 'resendVerification');
     Route::resource('invitation', InvitationController::class);
+
     Route::resource('bot', BotController::class)->except('toggleStatus');
     Route::post('/bot/{bot}/toggle', [BotController::class, 'toggleStatus'])
         ->name('bot.toggle');
@@ -54,16 +62,90 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('organizations/{organization}/lesson/{lesson}/task-reorder', [LessonTaskController::class, 'reorder'])
         ->name('task.reorder');
 
+    Route::resource('organization/{organization}/console/homework', HomeworkController::class);
+
+    // Контрольные работы
+    Route::resource('organization/{organization}/console/exam', ExamController::class);
+
+    // Материалы задания
     Route::resource('organization/{organization}/console/material', LessonMaterialController::class);
     Route::patch('organizations/{organization}/lesson/{lesson}/material-reorder', [LessonMaterialController::class, 'reorder'])
         ->name('material.reorder');
 
+    // Задания уроков
+    Route::get('organization/{organization}/console/question/task', [QuestionController::class, 'taskIndex'])->name('question.task.index');
+    Route::patch('organizations/{organization}/task/{task}/questions-reorder', [QuestionController::class, 'reorder'])
+        ->name('question.task.reorder');
+    // Контрольные работы
+    Route::get('organization/{organization}/console/question/exam', [QuestionController::class, 'examIndex'])->name('question.exam.index');
+    Route::patch('organizations/{organization}/exam/{exam}/questions-reorder', [QuestionController::class, 'reorder'])
+        ->name('question.exam.reorder');
+    // Домашние задания
+    Route::get('organization/{organization}/console/question/homework', [QuestionController::class, 'homeworkIndex'])->name('question.homework.index');
+    Route::patch('organizations/{organization}/homework/{homework}/questions-reorder', [QuestionController::class, 'reorder'])
+        ->name('question.homework.reorder');
+
     Route::resource('organization/{organization}/console/question', QuestionController::class);
-    Route::patch('organizations/{organization}/Tasks/{task}/questions-reorder', [QuestionController::class, 'reorder'])
-        ->name('question.reorder');
 
-    Route::resource('organization/{organization}/console/homework', HomeworkController::class);
+    // Студенты
+    Route::get('organization/{organization}/console/students', [StudentController::class, 'index'])
+        ->name('student.index');
+    Route::get('organization/{organization}/console/students/{student}', [StudentController::class, 'show'])
+        ->name('student.show');
 
+    // Назначение (batch)
+    Route::post('organization/{organization}/console/students/{student}/courses/assign', [StudentController::class, 'assignCourses'])
+        ->name('student.course.assign');
+    Route::post('organization/{organization}/console/students/{student}/homeworks/assign', [StudentController::class, 'assignHomeworks'])
+        ->name('student.homework.assign');
+    Route::post('organization/{organization}/console/students/{student}/exams/assign', [StudentController::class, 'assignExams'])
+        ->name('student.exam.assign');
+
+    // Удаление (batch)
+    Route::post('organization/{organization}/console/students/{student}/courses/remove', [StudentController::class, 'removeCourses'])
+        ->name('student.course.remove');
+    Route::post('organization/{organization}/console/students/{student}/homeworks/remove', [StudentController::class, 'removeHomeworks'])
+        ->name('student.homework.remove');
+    Route::post('organization/{organization}/console/students/{student}/exams/remove', [StudentController::class, 'removeExams'])
+        ->name('student.exam.remove');
+
+    Route::get('organizations/{organization}/students/{student}/progress/{progress}', [StudentController::class, 'progressShow'])
+        ->name('student.progress.show');
+
+    Route::get('organizations/{organization}/students/{student}/progress', [StudentController::class, 'progress'])
+        ->name('student.progress.index');
+
+    Route::prefix('organizations/{organization}/progress')->name('progress.')->group(function () {
+        Route::get('check', [ProgressCheckController::class, 'index'])->name('check.index');
+        Route::get('{progress}/check', [ProgressCheckController::class, 'show'])->name('check.show');
+        Route::put('{progress}/check', [ProgressCheckController::class, 'update'])->name('check.update');
+    });
+
+    Route::resource('organizations/{organization}/groups', GroupController::class)
+        ->names('group')
+        ->parameters(['groups' => 'group']);
+
+    Route::post('organizations/{organization}/groups/{group}/invitations', [InvitationController::class, 'storeForGroup'])
+        ->name('group.invitation.store');
+
+// Дополнительные маршруты для управления связями
+    Route::prefix('organizations/{organization}/groups/{group}')->name('group.')->group(function () {
+        // Студенты
+        Route::post('/students', [GroupController::class, 'addStudents'])->name('student.add');
+        Route::delete('/students/{student}', [GroupController::class, 'removeStudent'])->name('student.remove');
+
+        // Курсы
+        Route::post('/courses', [GroupController::class, 'assignCourse'])->name('course.assign');
+        Route::delete('/courses/{groupCourse}', [GroupController::class, 'removeCourse'])->name('course.remove');
+
+        // Домашние задания
+        Route::post('/homeworks', [GroupController::class, 'assignHomework'])->name('homework.assign');
+        Route::delete('/homeworks/{groupHomework}', [GroupController::class, 'removeHomework'])->name('homework.remove');
+
+        // Экзамены
+        Route::post('/exams', [GroupController::class, 'assignExam'])->name('exam.assign');
+        Route::delete('/exams/{groupExam}', [GroupController::class, 'removeExam'])->name('exam.remove');
+    });
 });
 
 

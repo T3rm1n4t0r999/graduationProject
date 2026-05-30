@@ -48,7 +48,7 @@ export default function InvitationsListModal({ isOpen, onClose, invitations = []
             preserveScroll: true,
         });
     };
-
+    console.log(invitations)
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -100,6 +100,7 @@ export default function InvitationsListModal({ isOpen, onClose, invitations = []
                                                 <tr style={{ background: 'var(--color-bg-card)' }}>
                                                     <th className="text-left text-xs font-semibold text-meta uppercase py-3.5 pl-4 pr-3 sm:pl-6">Email</th>
                                                     <th className="text-left text-xs font-semibold text-meta uppercase px-3 py-3.5">Роль</th>
+                                                    <th className="text-left text-xs font-semibold text-meta uppercase px-3 py-3.5">Группа</th>
                                                     <th className="text-left text-xs font-semibold text-meta uppercase px-3 py-3.5">Статус</th>
                                                     <th className="text-left text-xs font-semibold text-meta uppercase px-3 py-3.5">Дата принятия</th>
                                                     <th className="text-left text-xs font-semibold text-meta uppercase px-3 py-3.5">Дата отправки</th>
@@ -114,6 +115,7 @@ export default function InvitationsListModal({ isOpen, onClose, invitations = []
                                                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                                                             <UserBadge type={inv.type} />
                                                         </td>
+                                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-meta">{inv.group ? inv.group : '---' }</td>
                                                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                                                             <StatusBadge status={inv.status} />
                                                         </td>

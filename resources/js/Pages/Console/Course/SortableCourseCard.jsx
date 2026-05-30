@@ -18,7 +18,7 @@ export default function SortableCourseCard({ course, organization, isReordering 
         transition,
         opacity: isDragging ? 0.7 : 1,
     };
-    // Всё содержимое карточки
+
     const content = (
         <div
             ref={setNodeRef}
@@ -29,59 +29,44 @@ export default function SortableCourseCard({ course, organization, isReordering 
                 isReordering ? "cursor-grab active:cursor-grabbing" : ""
             } ${isDragging ? "shadow-lg z-30" : ""}`}
         >
-            <h3
-                className="text-lg font-semibold flex items-center gap-2"
-                style={{ color: "var(--color-text-primary)" }}
-            >
+            <h3 className="text-lg font-semibold text-main flex items-center gap-2 truncate">
                 {course.title}
                 <span
-                    className={`inline-block w-2.5 h-2.5 rounded-full ${
-                        course.is_active ? 'bg-green-500' : 'bg-gray-500'
-                    }`}
+                    className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{
+                        background: course.is_active
+                            ? 'var(--color-success)'
+                            : 'var(--color-text-muted)',
+                    }}
                     title={course.is_active ? 'Активен' : 'Неактивен'}
                 />
             </h3>
 
-            <p
-                className="text-sm line-clamp-2"
-                style={{ color: 'var(--color-text-secondary)' }}
-            >
-                {course.description || 'Описание отсутствует'}
+            <p className="text-sm line-clamp-2 text-meta">
+                {course.description ? course.description : 'Описание отсутствует'}
             </p>
 
-            {/* Футер с информацией */}
+            {/* Футер */}
             <div className="mt-auto pt-3 border-t flex items-center justify-between text-xs flex-wrap gap-2"
-                 style={{ borderColor: "var(--color-border)" }}>
-                <span style={{ color: 'var(--color-text-muted)' }}>
-                    Порядок: {course.order}
-                 </span>
-                <span style={{ color: "var(--color-text-muted)" }}>
-                    Модули: {course.modules_count ?? 0}
-                </span>
-
+                 style={{ borderColor: 'var(--color-border)' }}>
+                <span className="text-label">Порядок: {course.order}</span>
+                <span className="text-label">Модули: {course.modules_count ?? 0}</span>
 
                 {!isReordering && (
-                    <span className="flex items-center gap-1" style={{ color: "var(--color-primary)" }}>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                        Подробнее
+                    <span className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                        Подробнее →
                     </span>
                 )}
 
                 {isReordering && (
-                    <div className="flex items-center gap-1" style={{ color: "var(--color-text-muted)" }}>
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                        Перетащите
-                    </div>
+                    <span className="text-label">
+                        ≡ Перетащите
+                    </span>
                 )}
             </div>
         </div>
     );
 
-    // Если не режим перетаскивания – оборачиваем в ссылку на курс
     if (!isReordering) {
         return (
             <Link
@@ -96,6 +81,5 @@ export default function SortableCourseCard({ course, organization, isReordering 
         );
     }
 
-    // В режиме перетаскивания возвращаем просто div
     return content;
 }

@@ -56,12 +56,14 @@ class Lesson extends Model
         static::creating(function (Lesson $lesson) {
             if (empty($lesson->order)) {
                 $lesson->order = static::where('organization_id', $lesson->organization_id)
+                        ->where('module_id', $lesson->module_id)
                         ->max('order') + 1;
             }
         });
 
         static::deleted(function (Lesson $lesson) {
             Lesson::where('organization_id', $lesson->organization_id)
+                ->where('module_id', $lesson->module_id)
                 ->where('order', '>', $lesson->order)
                 ->decrement('order');
         });

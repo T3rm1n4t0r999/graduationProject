@@ -17,6 +17,7 @@ class LessonMaterial extends Model
         'order',
         'material_type',
         'lesson_id',
+        'video_url',
         'organization_id',
         'is_active',
     ];

@@ -10,12 +10,14 @@ class StudentHomework extends Model
 {
     use HasFactory;
 
-    protected $table = 'student_homework';
+    protected $table = 'student_homeworks';
 
     protected $fillable = [
         'homework_id',
         'student_id',
-        'organization_id'
+        'organization_id',
+        'granted_by',
+        'granted_at',
     ];
 
     public function organization(): BelongsTo{

@@ -19,9 +19,12 @@ export default function WelcomeLayout({ auth, children }) {
                         </Link>
 
                         <nav className="flex items-center gap-4">
+                            <Link href={route('guide')} className="btn-ghost">
+                                Как пользоваться платформой
+                            </Link>
                             {auth?.user ? (
                                 <Link href="/dashboard" className="btn-ghost">
-                                    Dashboard
+                                    Личный кабинет
                                 </Link>
                             ) : (
                                 <>

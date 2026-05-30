@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Question;
 
+use App\Models\Exam;
 use App\Models\Homework;
 use App\Models\LessonTask;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,33 +12,50 @@ class QuestionStoreRequest extends FormRequest
 {
     public function rules(): array
     {
-        // Базовые правила всегда
         return [
             'question' => ['required', 'string', 'min:5', 'max:2000'],
-            'question_type' => ['required', 'string', Rule::in(['single_choice', 'multiple_choice', 'text'])],
+            'question_type' => ['required', 'string', Rule::in(['single_choice', 'multiple_choice', 'text', 'free_text'])],
             'points' => ['required', 'integer', 'min:1', 'max:100'],
             'explanation' => ['nullable', 'string', 'max:1000'],
-            'is_active' => ['nullable', 'boolean'],
-            'questionable_type' => ['required', 'string', Rule::in([LessonTask::class, Homework::class])],
+            'is_active' => ['required', 'boolean'],
+            'questionable_type' => ['required', 'string', Rule::in([
+                LessonTask::getMorphType(),
+                Homework::getMorphType(),
+                Exam::getMorphType()
+            ])],
             'questionable_id' => [
                 'required', 'integer',
                 Rule::exists($this->getQuestionableTable(), 'id')
                     ->where('organization_id', $this->route('organization')->id)
             ],
-            'options' => ['required', 'array', 'min:1'],
-            'options.*.text' => ['required', 'string', 'min:1'],
+            // options и correct_answers обязательны только для типов, отличных от free_text
+            'options' => [
+                Rule::requiredIf(!in_array($this->input('question_type'), ['free_text'])),
+                'array',
+            ],
+            'options.*.text' => [
+                Rule::requiredIf(!in_array($this->input('question_type'), ['free_text'])),
+                'string', 'min:1'
+            ],
+            'correct_answers' => [
+                Rule::requiredIf(!in_array($this->input('question_type'), ['free_text'])),
+                'array',
+            ],
+            'correct_answers.*' => [
+                'string',
+            ],
+            'image'              => ['nullable', 'image', 'max:2048'], // <-- добавить
 
-            'correct_answers' => ['required', 'array', 'min:1'],
-            'correct_answers.*' => ['required', 'string', 'min:1',],
         ];
-
     }
 
     private function getQuestionableTable(): string
     {
+        // Приходит короткое имя: lesson_task, homework, exam
         return match ($this->input('questionable_type')) {
-            LessonTask::class => 'lesson_task',
-            Homework::class => 'homeworks',
+            'lesson_task' => 'lesson_task',
+            'homework' => 'homeworks',
+            'exam' => 'exams',
             default => 'lesson_task',
         };
     }

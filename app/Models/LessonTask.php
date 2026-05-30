@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class LessonTask extends Model
 {
@@ -20,6 +21,7 @@ class LessonTask extends Model
         'lesson_id',
         'order',
         'is_active',
+        'max_attempts',
         'organization_id'
     ];
 
@@ -29,6 +31,7 @@ class LessonTask extends Model
 
     protected $casts = [
         'max_score' => 'integer',
+        'order' => 'integer',
     ];
 
     /**
@@ -47,6 +50,12 @@ class LessonTask extends Model
         return $this->morphMany(Question::class, 'questionable');
     }
 
+
+    public static function getMorphType(): string
+    {
+        return Relation::getMorphAlias(static::class);
+    }
+
     /**
      * Полиморфная связь с прогрессом студентов
      */
@@ -63,7 +72,7 @@ class LessonTask extends Model
         parent::boot();
 
         static::creating(function (LessonTask $lessonTask) {
-            if (empty($module->order)) {
+            if (empty($lessonTask->order)) {
                 $lessonTask->order = static::where('lesson_id', $lessonTask->lesson_id)
                         ->max('order') + 1;
             }

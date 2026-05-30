@@ -1,11 +1,9 @@
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import {SortableContext, verticalListSortingStrategy, arrayMove, rectSortingStrategy} from "@dnd-kit/sortable";
-import {Link, router, usePage} from "@inertiajs/react";
+import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { router } from "@inertiajs/react";
 import { useState } from "react";
-import SortableTaskCard from "@/Pages/Console/Lesson/SortableTaskCard.jsx";
+import SortableTaskCard from "@/Pages/Console/LessonTask/SortableTaskCard.jsx";
 import CreateTaskForm from "@/Pages/Console/LessonTask/CreateTaskForm.jsx";
-
-
 
 export default function SortableTasks({ tasks, organization, lesson }) {
     const [isTaskReordering, setIsTaskReordering] = useState(false);
@@ -60,59 +58,53 @@ export default function SortableTasks({ tasks, organization, lesson }) {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
+            {/* Заголовок и кнопки управления */}
+            <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        Задания
-                    </h2>
-                    <span className="text-sm px-3 py-1 rounded-full" style={{ background: 'var(--color-bg-card-hover)', color: 'var(--color-text-muted)' }}>
-                        {tasks.length || 0} шт.
-                    </span>
+                    <h2 className="text-xl font-semibold text-main">Задания</h2>
+                    <span className="badge">{tasks.length || 0} шт.</span>
                 </div>
                 <div className="flex gap-2">
-
                     {!isTaskReordering ? (
                         <>
-                            <button onClick={() => setIsCreateTaskModalOpen(true)} className="btn-primary">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Создать задание
+                            <button
+                                onClick={() => setIsCreateTaskModalOpen(true)}
+                                className="btn-primary flex items-center gap-2"
+                            >
+                                + Создать задание
                             </button>
-                            <button onClick={startReordering} className="btn-ghost text-sm">
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                </svg>
-                                Изменить порядок
+                            <button
+                                onClick={startReordering}
+                                className="btn-ghost text-sm"
+                            >
+                                ⇅ Изменить порядок
                             </button>
                         </>
                     ) : (
                         <>
-                            <button onClick={saveOrder} className="btn-primary text-sm">Сохранить</button>
-                            <button onClick={cancelReordering} className="btn-ghost text-sm">Отмена</button>
+                            <button onClick={saveOrder} className="btn-primary text-sm">
+                                Сохранить
+                            </button>
+                            <button onClick={cancelReordering} className="btn-ghost text-sm">
+                                Отмена
+                            </button>
                         </>
                     )}
                 </div>
             </div>
 
+            {/* Список заданий */}
             {tasks.length === 0 ? (
-                <p style={{ color: 'var(--color-text-muted)' }}>Модулей пока нет.</p>
+                <p className="text-meta text-center py-8">Заданий пока нет.</p>
             ) : !isTaskReordering ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {tasks.map(task => (
-                        <Link
+                        <SortableTaskCard
                             key={task.id}
-                            href={route('task.show', {
-                                organization: organization.id,
-                                task: task.id,
-                            })}
-                            className="block"
-                        >
-                            <SortableTaskCard
-                                organization={organization}
-                                task={task}
-                                isReordering={false} />
-                        </Link>
+                            task={task}
+                            organization={organization}
+                            isReordering={isTaskReordering}
+                        />
                     ))}
                 </div>
             ) : (
@@ -124,7 +116,6 @@ export default function SortableTasks({ tasks, organization, lesson }) {
                                     key={task.id}
                                     task={task}
                                     organization={organization}
-                                    lesson={lesson}
                                     isReordering={isTaskReordering}
                                 />
                             ))}
@@ -132,6 +123,7 @@ export default function SortableTasks({ tasks, organization, lesson }) {
                     </SortableContext>
                 </DndContext>
             )}
+
             <CreateTaskForm
                 isOpen={isCreateTaskModalOpen}
                 onClose={() => setIsCreateTaskModalOpen(false)}

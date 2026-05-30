@@ -12,6 +12,7 @@ class LessonStoreRequest extends FormRequest
             'title' => ['required', 'string', 'max:20'],
             'description' => ['nullable', 'string', 'max:200'],
             'module_id' => ['required', 'integer', 'exists:modules,id'],
+            'is_active' => ['boolean', 'required'],
         ];
     }
 }

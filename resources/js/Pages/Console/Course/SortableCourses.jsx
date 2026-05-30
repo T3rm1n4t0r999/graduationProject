@@ -13,12 +13,10 @@ import {
 } from '@dnd-kit/sortable';
 import SortableCourseCard from "@/Pages/Console/Course/SortableCourseCard.jsx";
 
-
 const SortableCourses = forwardRef(({ organization, courses, onSaveOrder }, ref) => {
     const [isReordering, setIsReordering] = useState(false);
     const [localCourses, setLocalCourses] = useState([]);
 
-    // При включении режима сортировки копируем courses в локальное состояние
     useEffect(() => {
         if (isReordering && courses.length) {
             setLocalCourses([...courses]);
@@ -59,33 +57,29 @@ const SortableCourses = forwardRef(({ organization, courses, onSaveOrder }, ref)
         setIsReordering(false);
     };
 
-    // Для доступа к текущему порядку извне (хотя теперь не нужно, т.к. сохранение внутри)
     useImperativeHandle(ref, () => ({
         getOrderedCourses: () => localCourses,
     }));
 
-    // Пустое состояние
     if (courses.length === 0) {
         return (
             <div className="glass-card p-12 text-center">
-                <p className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>
-                    Пока нет ни одного курса.
-                </p>
+                <p className="text-lg text-meta">Пока нет ни одного курса.</p>
             </div>
         );
     }
 
     return (
         <div>
-            {/* Блок кнопок переключения режима */}
+            {/* Кнопки управления */}
             <div className="flex justify-end mb-8">
                 <div className="flex gap-3">
                     {!isReordering ? (
-                        <button onClick={handleStartReordering} className="btn-ghost">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                            Изменить порядок
+                        <button
+                            onClick={handleStartReordering}
+                            className="btn-ghost gap-2"
+                        >
+                            ⇅ Изменить порядок
                         </button>
                     ) : (
                         <>
@@ -100,7 +94,7 @@ const SortableCourses = forwardRef(({ organization, courses, onSaveOrder }, ref)
                 </div>
             </div>
 
-            {/* Рендер списка в зависимости от режима */}
+            {/* Список */}
             {!isReordering ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {courses.map((course) => (

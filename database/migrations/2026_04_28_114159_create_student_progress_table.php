@@ -28,6 +28,9 @@ return new class extends Migration
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
+            $table->boolean('checked')->default(false);
+            $table->integer('checked_by')->default(0);
+            $table->boolean('finished_by_timeout')->nullable();
             $table->timestamps();
 
             // Уникальный индекс для предотвращения дублирования попыток

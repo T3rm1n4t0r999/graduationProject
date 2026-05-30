@@ -15,8 +15,9 @@ return new class extends Migration
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
-            $table->integer('order')->default(0);
+            $table->integer('order')->default(1);
             $table->boolean('is_active')->default(false);
+            $table->boolean('auto_assign')->default(true);
             $table->timestamps();
 
             $table->index('organization_id');
