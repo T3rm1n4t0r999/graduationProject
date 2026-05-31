@@ -25,8 +25,8 @@ return new class extends Migration
             // Индексы для оптимизации
             $table->index('organization_id');
             $table->index('telegram_id');
-            $table->index('role');
             $table->index('score');
+            $table->index(['organization_id', 'score']);
         });
     }
 

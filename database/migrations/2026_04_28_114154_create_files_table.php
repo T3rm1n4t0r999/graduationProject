@@ -17,14 +17,17 @@ return new class extends Migration
             $table->string('mime_type')->nullable();
             $table->string('extension')->nullable();
 
-            // Полиморфные связи
+// Полиморфные связи
             $table->unsignedBigInteger('fileable_id');
             $table->string('fileable_type');
 
             $table->timestamps();
 
-            // Индексы для производительности
-            $table->index(['fileable_id', 'fileable_type']);
+            // ✅ ПРАВИЛЬНЫЙ ПОРЯДОК: type первым, затем id
+            $table->index(['fileable_type', 'fileable_id'], 'files_fileable_index');
+
+            // ✅ Индекс для быстрой фильтрации по типу файла (используется в Question::imageFile)
+            $table->index('mime_type');
         });
     }
 

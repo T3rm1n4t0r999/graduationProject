@@ -25,8 +25,7 @@ class ProgressCheckController extends Controller
             'date_to'    => 'nullable|date|after_or_equal:date_from',
         ]);
 
-        // Базовые условия для непроверенных попыток
-        $baseConditions = function ($query) use ($organization, $filters) {
+        $applyFilters = function ($query) use ($organization, $filters) {
             $query->where('organization_id', $organization->id)
                 ->where('checked', false)
                 ->when(!empty($filters['student_id']), fn($q) => $q->where('student_id', $filters['student_id']))
@@ -35,9 +34,9 @@ class ProgressCheckController extends Controller
                 ->when(!empty($filters['date_to']), fn($q) => $q->whereDate('created_at', '<=', $filters['date_to']));
         };
 
-        // Лучшие баллы только для тех заданий, где у студента ещё нет проверенной попытки
+        // 1. Подзапрос: Максимальный балл для каждой связки (студент, задание), где НЕТ проверенных попыток
         $maxPointsSub = StudentProgress::query()
-            ->where($baseConditions)
+            ->where($applyFilters)
             ->whereNotExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('student_progress as sp_checked')
@@ -49,7 +48,7 @@ class ProgressCheckController extends Controller
             ->groupBy('student_id', 'progressable_type', 'progressable_id')
             ->selectRaw('student_id, progressable_type, progressable_id, MAX(points) as max_points');
 
-        // ID лучших попыток
+        // 2. Подзапрос: ID последней попытки (MAX(id)) среди тех, что набрали максимальный балл
         $bestIdSub = StudentProgress::query()
             ->joinSub($maxPointsSub, 'max_points_table', function ($join) {
                 $join->on('student_progress.student_id', '=', 'max_points_table.student_id')
@@ -57,21 +56,21 @@ class ProgressCheckController extends Controller
                     ->on('student_progress.progressable_id', '=', 'max_points_table.progressable_id')
                     ->on('student_progress.points', '=', 'max_points_table.max_points');
             })
-            ->where($baseConditions)
+            ->where($applyFilters)
             ->groupBy('student_progress.student_id', 'student_progress.progressable_type', 'student_progress.progressable_id')
             ->selectRaw('MAX(student_progress.id) as best_id');
 
-        $bestIds = $bestIdSub->pluck('best_id');
-
-        // Основной запрос
-        $progresses = StudentProgress::whereIn('id', $bestIds)
+        // ✅ КРИТИЧЕСКАЯ ОПТИМИЗАЦИЯ: Передаем подзапрос напрямую в whereIn.
+        // Это генерирует SQL: WHERE id IN (SELECT ...).
+        // PHP не загружает массив ID в память, исключается ошибка max_allowed_packet.
+        $progresses = StudentProgress::whereIn('id', $bestIdSub)
             ->with(['student', 'progressable'])
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString()
             ->through(fn($p) => [
                 'id'               => $p->id,
-                'student_name'     => $p->student?->lastname . ' ' . $p->student?->firstname,
+                'student_name'     => $p->student ? ($p->student->lastname . ' ' . $p->student->firstname) : 'Неизвестный',
                 'title'            => $p->progressable?->title ?? 'Без названия',
                 'type'             => $p->progressable_type,
                 'points'           => $p->points,
@@ -80,8 +79,10 @@ class ProgressCheckController extends Controller
                 'created_at'       => $p->created_at?->format('d.m.Y H:i'),
             ]);
 
+        // ✅ select() + orderBy для выпадающего списка (экономия памяти)
         $students = $organization->students()
             ->select('id', 'lastname', 'firstname')
+            ->orderBy('lastname')
             ->get()
             ->map(fn($s) => [
                 'id'   => $s->id,

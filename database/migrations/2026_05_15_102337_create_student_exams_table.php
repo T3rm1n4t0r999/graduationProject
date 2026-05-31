@@ -20,10 +20,14 @@ return new class extends Migration
             $table->string('granted_by')->default('admin');
             $table->timestamps();
 
-            $table->unique(['exam_id', 'student_id']);
-            $table->index('organization_id');
+            // ✅ student_id ПЕРВЫМ
+            $table->unique(['student_id', 'exam_id'], 'student_exam_unique');
+
+            // ✅ Составной индекс для фильтрации
+            $table->index(['organization_id', 'student_id'], 'se_org_student_idx');
+
+            // ✅ Индекс для поиска всех студентов с конкретным экзаменом
             $table->index('exam_id');
-            $table->index('student_id');
         });
     }
 

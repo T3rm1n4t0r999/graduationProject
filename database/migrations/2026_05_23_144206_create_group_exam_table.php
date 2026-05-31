@@ -17,7 +17,11 @@ return new class extends Migration
             $table->foreignId('exam_id')->constrained('exams')->cascadeOnDelete();
             $table->timestamp('granted_at')->useCurrent();
             $table->string('granted_by')->nullable();
-            $table->unique(['group_id', 'exam_id']);
+
+            $table->unique(['group_id', 'exam_id'], 'group_exam_unique');
+
+            // ✅ Индекс для поиска всех групп с конкретным экзаменом
+            $table->index('exam_id');
         });
     }
 

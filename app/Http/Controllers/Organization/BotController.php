@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Organization;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BotResource;
 use App\Http\Resources\OrganizationResource;
+use App\Jobs\ToggleBotStatusJob;
 use App\Models\Bot;
 use App\Models\Organization;
 use Illuminate\Http\Request;
@@ -35,26 +36,27 @@ class BotController extends Controller
      */
     public function store(Request $request)
     {
-        $organization = Organization::where('id', $request->get('organization_id'))->first();
+        // 1. Сначала валидация (защита от NPE)
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'bot_url' => 'required|string|max:100', // Исправлено на required
+            'token' => 'required|string|max:500',
+            'organization_id' => 'required|exists:organizations,id',
+        ]);
+
+        $organization = Organization::findOrFail($data['organization_id']);
+
+        // 2. Авторизация (защита от IDOR)
+        $this->authorize('manage', $organization);
 
         if (!$organization->isVerified()){
             return back()->with('error', 'Подтвердите организацию для создания бота.');
         }
 
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'bot_url' => 'required|string|max:100',
-            'token' => 'required|string|max:500',
-            'organization_id' => 'required|exists:organizations,id',
-        ]);
-        try {
-            return DB::transaction(function () use ($data) {
-                Bot::create($data);
-                return back()->with('success', 'Бот успешно создан');
-            });
-        }catch (\Exception $e){
-            return back()->with('error', 'Не удалось создать бота');
-        }
+        // 3. Убрали лишнюю транзакцию
+        Bot::create($data);
+
+        return back()->with('success', 'Бот успешно создан');
     }
 
     /**
@@ -88,19 +90,21 @@ class BotController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'token' => 'nullable|string|max:500',
-            'bot_url' => 'nullable|string|max:100',
+            'bot_url' => 'required|string|max:100', // Исправлено на required
         ]);
+
+        // Оптимизированное обновление
+        $bot->name = $data['name'];
+        $bot->bot_url = $data['bot_url'];
 
         if (!empty($data['token'])) {
             $bot->token = $data['token'];
         }
 
-        $bot->name = $data['name'];
-        $bot->bot_url = $data['bot_url'];
         $bot->save();
 
-        return redirect()->route('organization.show', $bot->organization->id)
-            ->with('success', 'Бот успешно обновлен');
+        return redirect()->route('organization.show', $bot->organization_id) // Используем ID, чтобы не делать лишний запрос к связи
+        ->with('success', 'Бот успешно обновлен');
     }
 
     /**
@@ -118,31 +122,10 @@ class BotController extends Controller
         $this->authorize('update', $bot);
 
         $newStatus = !$bot->is_active;
-        $action = $newStatus ? 'start-bot' : 'stop-bot';
-        try {
-            // Отправка запроса на внешний сервер бота
-            $externalUrl = config('services.bot_manager.url'); // URL из .env
 
-            if (!$externalUrl) {
-                return back()->with('error', 'Ошибка запуска бота.');
-            }
+        // Отправляем в очередь, чтобы не блокировать сервер
+        dispatch(new ToggleBotStatusJob($bot, $newStatus));
 
-            $response = Http::timeout(10)
-                ->withoutVerifying()
-                ->post($externalUrl . '/admin/' . $action, [
-                    'token' => $bot->token,
-                ]);
-            if ($response->successful()) {
-                // Обновляем статус в базе данных только если внешний сервис ответил успешно
-                $bot->update(['is_active' => $newStatus]);
-            } else if(!$response->successful() && !$newStatus) {
-                $bot->update(['is_active' => $newStatus]);
-            } else {
-                return back()->with('error', 'Ошибка запуска бота. Внешний сервис недоступен.');
-            }
-
-        } catch (\Exception $e) {
-            return back()->with('error', 'Неизвестная ошибка запуска бота.');
-        }
+        return back()->with('success', 'Задача на изменение статуса отправлена.');
     }
 }

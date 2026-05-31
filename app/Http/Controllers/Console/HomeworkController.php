@@ -34,63 +34,55 @@ class HomeworkController extends Controller
         ]);
 
         $homeworks = $organization->homeworks()
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                    // ✅ Нативный LIKE вместо LOWER() + whereRaw
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             })
-            ->when($request->filled('lesson_id'), function ($q) use ($request) {
-                $q->where('lesson_id', $request->lesson_id);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
+            ->when(!empty($filters['lesson_id']), fn($q) => $q->where('lesson_id', $filters['lesson_id']))
+            ->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']))
+            ->when(!empty($filters['date_from']), fn($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']), fn($q) => $q->whereDate('created_at', '<=', $filters['date_to']))
             ->withCount('questions')
-            ->when($request->filled('min_questions'), function ($q) use ($request) {
-                $q->has('questions', '>=', $request->min_questions);
-            })
-            ->when($request->filled('max_questions'), function ($q) use ($request) {
-                $q->has('questions', '<=', $request->max_questions);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                if ($request->sort === 'lesson_title') {
+            ->when(isset($filters['min_questions']), fn($q) => $q->has('questions', '>=', $filters['min_questions']))
+            ->when(isset($filters['max_questions']), fn($q) => $q->has('questions', '<=', $filters['max_questions']))
+            ->when(!empty($filters['sort']), function ($q) use ($filters) {
+                $direction = $filters['direction'] ?? 'asc';
+                if ($filters['sort'] === 'lesson_title') {
                     $q->join('lessons', 'homeworks.lesson_id', '=', 'lessons.id')
                         ->orderBy('lessons.title', $direction)
                         ->select('homeworks.*');
-                } elseif ($request->sort === 'questions_count') {
-                    $q->orderBy('questions_count', $direction);
                 } else {
-                    $q->orderBy($request->sort, $direction);
+                    $q->orderBy($filters['sort'], $direction);
                 }
-            }, function ($q) {
-                $q->orderByDesc('created_at'); // по умолчанию, как было изначально
-            })
-            ->with('lesson')
+            }, fn($q) => $q->orderByDesc('created_at'))
+            ->with('lesson') // ✅ Предотвращает N+1 при рендеринге списка
             ->paginate(12)
             ->withQueryString();
 
-        // Для формы создания нужны только свободные уроки, как и раньше
-        $occupiedLessonIds = $organization->homeworks()->pluck('lesson_id')->unique()->toArray();
+        // ✅ 1 SQL-запрос вместо 2-х. БД сама находит уроки без ДЗ через NOT EXISTS.
+        // PHP не загружает массив ID в память.
         $freeLessons = $organization->lessons()
-            ->whereNotIn('id', $occupiedLessonIds)
+            ->whereDoesntHave('homework')
+            ->select(['id', 'title', 'organization_id', 'module_id'])
             ->orderByDesc('created_at')
+            ->get();
+
+        // ✅ select() для экономии памяти при передаче на фронтенд для фильтров
+        $allLessons = $organization->lessons()
+            ->select(['id', 'title', 'organization_id', 'module_id'])
+            ->orderBy('title')
             ->get();
 
         return Inertia::render('Console/Homework/List', [
             'organization' => new OrganizationResource($organization),
             'homeworks'    => HomeworkResource::collection($homeworks),
-            'lessons'      => LessonResource::collection($freeLessons), // только свободные уроки для формы
+            'lessons'      => LessonResource::collection($freeLessons),
             'filters'      => $filters,
-            'allLessons'   => LessonResource::collection($organization->lessons()->orderBy('title')->get()),
+            'allLessons'   => LessonResource::collection($allLessons),
         ]);
     }
 
@@ -104,23 +96,20 @@ class HomeworkController extends Controller
             'questions' => fn($q) => $q->orderBy('order'),
         ]);
 
-
-        $occupiedLessonIds = Homework::where('organization_id', $organization->id)
-            ->where('id', '!=', $homework->id)
-            ->pluck('lesson_id')
-            ->unique()
-            ->toArray();
-
+        // ✅ Получаем уроки, у которых НЕТ домашнего задания, ИЛИ оно принадлежит текущему homework
         $availableLessons = $organization->lessons()
-            ->whereNotIn('id', $occupiedLessonIds)
-            ->orWhere('id', $homework->lesson_id)   // всегда показываем текущий урок
+            ->where(function ($q) use ($homework) {
+                $q->whereDoesntHave('homework')
+                    ->orWhereHas('homework', fn($hw) => $hw->where('id', $homework->id));
+            })
+            ->select(['id', 'title', 'organization_id', 'module_id'])
             ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('Console/Homework/Show', [
             'organization' => new OrganizationResource($organization),
             'homework'     => new HomeworkResource($homework),
-            'lessons'     => LessonResource::collection($availableLessons),
+            'lessons'      => LessonResource::collection($availableLessons),
         ]);
     }
 
@@ -130,16 +119,18 @@ class HomeworkController extends Controller
 
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
-        $validated['max_attempts'] = $validated['max_attempts'] ? $validated['max_attempts'] : 0;
-        $lesson = Lesson::findOrFail($validated['lesson_id']);
-        if ($lesson->organization_id !== $organization->id) {
-            abort(403, 'Урок не принадлежит данной организации.');
-        }
+        $validated['max_attempts'] = $validated['max_attempts'] ?? 0;
+
+        // ✅ 1 запрос вместо 2-х (Поиск + Проверка принадлежности)
+        Lesson::where('id', $validated['lesson_id'])
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
 
         Homework::create($validated);
 
         return back()->with('success', 'Домашнее задание успешно создано');
     }
+
 
     public function update(HomeworkUpdateRequest $request, Organization $organization, Homework $homework)
     {
@@ -147,15 +138,18 @@ class HomeworkController extends Controller
         abort_unless($homework->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
-        $lesson = Lesson::findOrFail($validated['lesson_id']);
-        if ($lesson->organization_id !== $organization->id) {
-            abort(403, 'Урок не принадлежит данной организации.');
-        }
+
+        // ✅ 1 запрос вместо 2-х
+        Lesson::where('id', $validated['lesson_id'])
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
 
         $homework->update($validated);
 
         return back()->with('success', 'Домашнее задание успешно обновлено');
     }
+
+
 
     public function destroy(Organization $organization, Homework $homework)
     {

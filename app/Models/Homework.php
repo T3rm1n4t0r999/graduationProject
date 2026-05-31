@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
@@ -47,29 +48,26 @@ class Homework extends Model
         return $this->morphMany(StudentProgress::class, 'progressable');
     }
 
+    public function students(): HasMany
+    {
+        return $this->hasMany(StudentHomework::class);
+    }
+
 
     public static function getMorphType(): string
     {
         return Relation::getMorphAlias(static::class);
     }
 
-    public function recalculateMaxScore(){
+    public function recalculateMaxScore(): int
+    {
         $totalPoints = $this->questions()
             ->where('is_active', true)
             ->sum('points');
 
-        // Обновляем поле max_score в самой модели
-        $this->update(['max_score' => $totalPoints]);
+        static::where('id', $this->id)->update(['max_score' => $totalPoints]);
+        $this->max_score = $totalPoints;
 
         return $totalPoints;
     }
-
-//    protected static function boot()
-//    {
-//        parent::boot();
-//
-//        static::saved(function ($homework) {
-//            $homework->updateMaxScore();
-//        });
-//    }
 }

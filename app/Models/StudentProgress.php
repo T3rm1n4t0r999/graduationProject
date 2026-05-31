@@ -76,7 +76,6 @@ class StudentProgress extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            // Автоматически устанавливаем attempt при создании
             if (empty($model->attempt)) {
                 $model->attempt = static::getNextAttempt(
                     $model->student_id,
@@ -87,22 +86,25 @@ class StudentProgress extends Model
         });
 
         static::updated(function (StudentProgress $progress) {
-            if (!$progress->checked) {
-                return;
-            }
+            $wasChecked = (bool) $progress->getOriginal('checked');
+            $isChecked = (bool) $progress->checked;
 
-            $oldPoints = (int) $progress->getOriginal('points');
-            $newPoints = (int) $progress->points;
+            // ✅ Баллы учитываются в рейтинге ТОЛЬКО если работа проверена
+            $oldPoints = $wasChecked ? (int) $progress->getOriginal('points') : 0;
+            $newPoints = $isChecked ? (int) $progress->points : 0;
+
             $diffPoints = $newPoints - $oldPoints;
 
-            $progress->student?->increment('score',  $diffPoints);
-            $progress->saveQuietly();
+            // ✅ Прямой запрос к БД избегает загрузки модели Student и рекурсии событий
+            if ($diffPoints !== 0 && $progress->student_id) {
+                Student::where('id', $progress->student_id)->increment('score', $diffPoints);
+            }
         });
 
-
         static::deleted(function (StudentProgress $progress) {
-            if ($progress->checked && ($progress->metadata['points_awarded'] ?? false)) {
-                $progress->student?->decrement('score', $progress->points);
+            // ✅ Если удаляется проверенная работа, баллы должны списаться
+            if ($progress->checked && $progress->student_id) {
+                Student::where('id', $progress->student_id)->decrement('score', $progress->points);
             }
         });
     }

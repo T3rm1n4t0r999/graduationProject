@@ -39,55 +39,59 @@ class LessonController extends Controller
         ]);
 
         $lessons = $organization->lessons()
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                    // Нативный LIKE в MySQL (utf8mb4_unicode_ci) нечувствителен к регистру
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             })
-            ->when($request->filled('module_id'), function ($q) use ($request) {
-                $q->where('module_id', $request->module_id);
+            ->when(!empty($filters['module_id']), function ($q) use ($filters) {
+                $q->where('module_id', $filters['module_id']);
             })
             ->when(isset($filters['is_active']), function ($q) use ($filters) {
                 $q->where('is_active', $filters['is_active']);
             })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
+            ->when(!empty($filters['date_from']), function ($q) use ($filters) {
+                $q->whereDate('created_at', '>=', $filters['date_from']);
             })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
+            ->when(!empty($filters['date_to']), function ($q) use ($filters) {
+                $q->whereDate('created_at', '<=', $filters['date_to']);
             })
-            ->withCount('tasks', 'materials')
-            ->when($request->filled('min_tasks'), function ($q) use ($request) {
-                $q->has('tasks', '>=', $request->min_tasks);
+            ->withCount(['tasks', 'materials'])
+            ->when(isset($filters['min_tasks']), function ($q) use ($filters) {
+                $q->has('tasks', '>=', $filters['min_tasks']);
             })
-            ->when($request->filled('max_tasks'), function ($q) use ($request) {
-                $q->has('tasks', '<=', $request->max_tasks);
+            ->when(isset($filters['max_tasks']), function ($q) use ($filters) {
+                $q->has('tasks', '<=', $filters['max_tasks']);
             })
-            ->when($request->filled('min_materials'), function ($q) use ($request) {
-                $q->has('materials', '>=', $request->min_materials);
+            ->when(isset($filters['min_materials']), function ($q) use ($filters) {
+                $q->has('materials', '>=', $filters['min_materials']);
             })
-            ->when($request->filled('max_materials'), function ($q) use ($request) {
-                $q->has('materials', '<=', $request->max_materials);
+            ->when(isset($filters['max_materials']), function ($q) use ($filters) {
+                $q->has('materials', '<=', $filters['max_materials']);
             })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                if ($request->sort === 'module_title') {
+            ->when(!empty($filters['sort']), function ($q) use ($filters) {
+                $direction = $filters['direction'] ?? 'asc';
+                if ($filters['sort'] === 'module_title') {
                     $q->join('modules', 'lessons.module_id', '=', 'modules.id')
                         ->orderBy('modules.title', $direction)
                         ->select('lessons.*');
-                } elseif (in_array($request->sort, ['tasks_count', 'materials_count'])) {
-                    $q->orderBy($request->sort, $direction);
                 } else {
-                    $q->orderBy($request->sort, $direction);
+                    $q->orderBy($filters['sort'], $direction);
                 }
             }, function ($q) {
                 $q->orderBy('order');
             })
-            ->get();
+            ->paginate(20);
 
-        $modules = $organization->modules()->orderBy('title')->get();
+        // ✅ Загружаем только нужные поля (id, title) вместо всех (*).
+        // Это экономит память, но сохраняет совместимость с ModuleResource.
+        $modules = $organization->modules()
+            ->select(['id', 'title', 'organization_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/Lesson/List', [
             'organization' => new OrganizationResource($organization),
@@ -107,12 +111,13 @@ class LessonController extends Controller
             'materials' => fn($q) => $q->orderBy('order'),
             'homework'
         ]);
-        $modules = $organization->modules()->get();
+
+        $modules = $organization->modules()->pluck('title', 'id'); // ✅ pluck
 
         return Inertia::render('Console/Lesson/Show', [
             'organization' => new OrganizationResource($organization),
             'lesson'       => new LessonResource($lesson),
-            'modules'      => ModuleResource::collection($modules),
+            'modules'      => $modules,
         ]);
     }
 
@@ -134,30 +139,22 @@ class LessonController extends Controller
 
         $validated = $request->validated();
         $newModuleId = $validated['module_id'] ?? $lesson->module_id;
-        $module = Module::findOrFail($newModuleId);
-        if ($module->organization_id !== $organization->id) {
-            abort(403, 'Модуль не принадлежит данной организации.');
+
+        // ✅ 1 запрос вместо 2 (поиск + проверка принадлежности организации)
+        $module = Module::where('id', $newModuleId)
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+
+        if ($lesson->module_id !== $module->id) {
+            // При переносе в другой модуль ставим урок в конец (без сдвига старых)
+            $validated['order'] = (Lesson::where('module_id', $module->id)->max('order') ?? 0) + 1;
         }
-        DB::transaction(function () use ($lesson, $validated, $module) {
-            $oldModuleId = $lesson->module_id;
-            $oldOrder    = $lesson->order;
-            $isModuleChanged = $oldModuleId != $module->id;
 
-            if ($isModuleChanged) {
-                // При переносе в другой курс ставим модуль в конец
-                $maxOrder = Lesson::where('module_id', $module->id)->max('order') ?? 0;
-                $validated['order'] = $maxOrder + 1;
+        $lesson->update($validated);
 
-                // Сдвигаем порядки в старом курсе (все, что > старого order, уменьшаем на 1)
-                Lesson::where('module_id', $oldModuleId)
-                    ->where('order', '>', $oldOrder)
-                    ->decrement('order');
-            }
-
-            $lesson->update($validated);
-        });
-        return back()->with('success', 'Модуль успешно обновлён');
+        return back()->with('success', 'Урок успешно обновлён');
     }
+
 
     public function destroy(Organization $organization, Lesson $lesson)
     {
@@ -179,13 +176,13 @@ class LessonController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(function () use ($validated, $module) {
-            foreach ($validated['items'] as $item) {
-                Lesson::where('id', $item['id'])
-                    ->where('module_id', $module->id)
-                    ->update(['order' => $item['order']]);
-            }
-        });
+        // ✅ Один SQL-запрос вместо N запросов в цикле
+        $updates = collect($validated['items'])->map(fn($item) => [
+            'id'    => $item['id'],
+            'order' => $item['order'],
+        ])->toArray();
+
+        Lesson::upsert($updates, ['id'], ['order']);
 
         return back()->with('success', 'Порядок уроков обновлён');
     }

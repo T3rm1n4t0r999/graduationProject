@@ -53,10 +53,5 @@ class Module extends Model
             }
         });
 
-        static::deleted(function (Module $module) {
-            Module::where('course_id', $module->course_id)
-                ->where('order', '>', $module->order)
-                ->decrement('order');
-        });
     }
 }

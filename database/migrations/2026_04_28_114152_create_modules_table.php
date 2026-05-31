@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('organization_id');
-            $table->index('title');
+            $table->index(['course_id', 'order']);
             $table->index('course_id');
         });
     }

@@ -17,7 +17,11 @@ return new class extends Migration
             $table->foreignId('homework_id')->constrained('homeworks')->cascadeOnDelete();
             $table->timestamp('granted_at')->useCurrent();
             $table->string('granted_by')->nullable();
-            $table->unique(['group_id', 'homework_id']);
+
+            $table->unique(['group_id', 'homework_id'], 'group_homework_unique');
+
+            // ✅ Индекс для поиска всех групп с конкретным ДЗ
+            $table->index('homework_id');
         });
     }
 

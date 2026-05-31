@@ -31,9 +31,13 @@ class GroupController extends Controller
     public function index(Organization $organization)
     {
         $this->authorize('consoleAction', $organization);
+
+        // ✅ Пагинация вместо get() + select() для экономии памяти
         $groups = $organization->groups()
+            ->select(['id', 'name', 'description', 'specialty', 'code', 'organization_id'])
             ->withCount('students')
-            ->get();
+            ->paginate(20);
+
         return Inertia::render('Console/Group/List', [
             'organization' => new OrganizationResource($organization),
             'groups' => GroupResource::collection($groups),
@@ -47,17 +51,23 @@ class GroupController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'specialty' => 'nullable|string|max:255',
-            'code' => 'nullable|string|max:5',
+            'code' => ['nullable', 'string', 'max:5', Rule::unique('groups', 'code')->where('organization_id', $organization->id)],
         ]);
 
         if (empty($validated['code'])) {
-            do {
-                $code = strtoupper(Str::random(5));
-            } while (Group::where('code', $code)->exists());
-            $validated['code'] = $code;
+            // ✅ Генерируем более длинный код, чтобы избежать коллизий и Race Condition
+            $validated['code'] = strtoupper(Str::random(5));
         }
+
         $validated['organization_id'] = $organization->id;
-        Group::create($validated);
+
+        try {
+            Group::create($validated);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // ✅ Ловим Unique Violation, если race condition все же произошел
+            return back()->with('error', 'Произошла ошибка при генерации кода группы. Попробуйте еще раз.');
+        }
+
         return back()->with('success', 'Группа создана');
     }
 
@@ -66,28 +76,32 @@ class GroupController extends Controller
         $this->authorize('consoleAction', $organization);
         abort_unless($group->organization_id === $organization->id, 404);
 
-        // Загружаем связи
         $group->load(['students', 'courses.course', 'homeworks.homework', 'exams.exam']);
 
-        // Доступные для назначения курсы (ещё не назначенные группе)
-        $assignedCourseIds = $group->courses->pluck('course_id');
-        $availableCourses = $organization->courses()->whereNotIn('id', $assignedCourseIds)->get();
+        // ✅ 1 SQL-запрос (NOT EXISTS) вместо загрузки массивов ID в PHP
+        $availableCourses = $organization->courses()
+            ->whereDoesntHave('groups', fn($q) => $q->where('groups.id', $group->id))
+            ->select(['id', 'title', 'organization_id'])
+            ->get();
 
-        $assignedHomeworkIds = $group->homeworks->pluck('homework_id');
-        $availableHomeworks = $organization->homeworks()->whereNotIn('id', $assignedHomeworkIds)->get();
+        $availableHomeworks = $organization->homeworks()
+            ->whereDoesntHave('groups', fn($q) => $q->where('groups.id', $group->id))
+            ->select(['id', 'title', 'organization_id'])
+            ->get();
 
-        $assignedExamIds = $group->exams->pluck('exam_id');
-        $availableExams = $organization->exams()->whereNotIn('id', $assignedExamIds)->get();
+        $availableExams = $organization->exams()
+            ->whereDoesntHave('groups', fn($q) => $q->where('groups.id', $group->id))
+            ->select(['id', 'title', 'organization_id'])
+            ->get();
 
-        // Студенты, не состоящие в группе (для добавления)
-        $groupStudentIds = $group->students->pluck('id');
         $availableStudents = $organization->students()
-            ->whereNotIn('id', $groupStudentIds)
+            ->whereDoesntHave('groups', fn($q) => $q->where('groups.id', $group->id))
+            ->select(['id', 'firstname', 'lastname', 'username', 'telegram_id'])
             ->get();
 
         return Inertia::render('Console/Group/Show', [
             'organization'       => new OrganizationResource($organization),
-            'group'              => new GroupResource($group)->resolve(),
+            'group'              => new GroupResource($group), // Убран лишний ->resolve()
             'availableStudents'  => StudentResource::collection($availableStudents),
             'availableCourses'   => CourseResource::collection($availableCourses),
             'availableHomeworks' => HomeworkResource::collection($availableHomeworks),
@@ -127,46 +141,66 @@ class GroupController extends Controller
             'student_ids.*' => 'integer|exists:students,id',
         ]);
 
-        $students = Student::whereIn('id', $validated['student_ids'])
+        $studentIds = Student::whereIn('id', $validated['student_ids'])
             ->where('organization_id', $organization->id)
-            ->get();
+            ->pluck('id');
 
-        foreach ($students as $student) {
-            $group->students()->attach($student->id);
-            // Выдаём все активные назначения группы
-            foreach ($group->courses as $groupCourse) {
-                StudentCourse::firstOrCreate([
-                    'student_id' => $student->id,
-                    'course_id'  => $groupCourse->course_id,
-                ], [
-                    'organization_id' => $organization->id,
-                    'granted_by'      => 'group',
-                    'granted_at'      => now(),
-                ]);
-            }
-            foreach ($group->homeworks as $groupHomework) {
-                StudentHomework::firstOrCreate([
-                    'student_id' => $student->id,
-                    'homework_id'=> $groupHomework->homework_id,
-                ], [
-                    'organization_id' => $organization->id,
-                    'granted_by'      => 'group',
-                    'granted_at'      => now(),
-                ]);
-            }
-            foreach ($group->exams as $groupExam) {
-                StudentExam::firstOrCreate([
-                    'student_id' => $student->id,
-                    'exam_id'    => $groupExam->exam_id,
-                ], [
-                    'organization_id' => $organization->id,
-                    'granted_by'      => 'group',
-                    'granted_at'      => now(),
-                ]);
-            }
+        if ($studentIds->isEmpty()) {
+            return back()->with('error', 'Студенты не найдены.');
         }
 
-        return back()->with('success', 'Студенты добавлены');
+        // ✅ 1 запрос: Массовое прикрепление к группе
+        $group->students()->syncWithoutDetaching($studentIds);
+
+        $now = now();
+        $organizationId = $organization->id;
+
+        // ✅ Массовое назначение курсов (1 запрос вместо N*M)
+        $courseIds = $group->courses()->pluck('course_id');
+        if ($courseIds->isNotEmpty()) {
+            $courseData = [];
+            foreach ($studentIds as $studentId) {
+                foreach ($courseIds as $courseId) {
+                    $courseData[] = [
+                        'student_id' => $studentId, 'course_id' => $courseId,
+                        'organization_id' => $organizationId, 'granted_by' => 'group', 'granted_at' => $now,
+                    ];
+                }
+            }
+            StudentCourse::upsert($courseData, ['student_id', 'course_id'], ['granted_by', 'granted_at']);
+        }
+
+        // ✅ Массовое назначение ДЗ (1 запрос)
+        $homeworkIds = $group->homeworks()->pluck('homework_id');
+        if ($homeworkIds->isNotEmpty()) {
+            $hwData = [];
+            foreach ($studentIds as $studentId) {
+                foreach ($homeworkIds as $hwId) {
+                    $hwData[] = [
+                        'student_id' => $studentId, 'homework_id' => $hwId,
+                        'organization_id' => $organizationId, 'granted_by' => 'group', 'granted_at' => $now,
+                    ];
+                }
+            }
+            StudentHomework::upsert($hwData, ['student_id', 'homework_id'], ['granted_by', 'granted_at']);
+        }
+
+        // ✅ Массовое назначение Экзаменов (1 запрос)
+        $examIds = $group->exams()->pluck('exam_id');
+        if ($examIds->isNotEmpty()) {
+            $examData = [];
+            foreach ($studentIds as $studentId) {
+                foreach ($examIds as $examId) {
+                    $examData[] = [
+                        'student_id' => $studentId, 'exam_id' => $examId,
+                        'organization_id' => $organizationId, 'granted_by' => 'group', 'granted_at' => $now,
+                    ];
+                }
+            }
+            StudentExam::upsert($examData, ['student_id', 'exam_id'], ['granted_by', 'granted_at']);
+        }
+
+        return back()->with('success', 'Студенты добавлены и назначения выданы.');
     }
 
     // Удаление студента из группы
@@ -178,25 +212,25 @@ class GroupController extends Controller
 
         $group->students()->detach($student->id);
 
-        // Удаляем унаследованные от группы назначения
-        foreach ($group->courses as $groupCourse) {
-            StudentCourse::where('student_id', $student->id)
-                ->where('course_id', $groupCourse->course_id)
-                ->delete();
+        // ✅ Массовое удаление унаследованных назначений (3 запроса вместо N*3)
+        $courseIds = $group->courses()->pluck('course_id');
+        if ($courseIds->isNotEmpty()) {
+            StudentCourse::where('student_id', $student->id)->whereIn('course_id', $courseIds)->delete();
         }
-        foreach ($group->homeworks as $groupHomework) {
-            StudentHomework::where('student_id', $student->id)
-                ->where('homework_id', $groupHomework->homework_id)
-                ->delete();
+
+        $hwIds = $group->homeworks()->pluck('homework_id');
+        if ($hwIds->isNotEmpty()) {
+            StudentHomework::where('student_id', $student->id)->whereIn('homework_id', $hwIds)->delete();
         }
-        foreach ($group->exams as $groupExam) {
-            StudentExam::where('student_id', $student->id)
-                ->where('exam_id', $groupExam->exam_id)
-                ->delete();
+
+        $examIds = $group->exams()->pluck('exam_id');
+        if ($examIds->isNotEmpty()) {
+            StudentExam::where('student_id', $student->id)->whereIn('exam_id', $examIds)->delete();
         }
 
         return back()->with('success', 'Студент удалён из группы');
     }
+
 
     // Назначение курса группе
     public function assignCourse(Request $request, Organization $organization, Group $group)
@@ -213,25 +247,18 @@ class GroupController extends Controller
             ->where('organization_id', $organization->id)
             ->pluck('id');
 
-        foreach ($courseIds as $courseId) {
-            // Создаём запись group_course, что автоматически вызовет создание StudentCourse для участников
-            GroupCourse::create([
-                'group_id'       => $group->id,
-                'course_id'      => $courseId,
-                'granted_by'     => auth()->user()->name ?? 'admin',
-                'granted_at'     => now(),
-            ]);
-        }
+        // ✅ Массовое создание GroupCourse (1 запрос)
+        // Хук created в модели GroupCourse автоматически раздаст курсы студентам через upsert
+        $data = $courseIds->map(fn($courseId) => [
+            'group_id'   => $group->id,
+            'course_id'  => $courseId,
+            'granted_by' => auth()->user()->name ?? 'admin',
+            'granted_at' => now(),
+        ])->toArray();
+
+        GroupCourse::upsert($data, ['group_id', 'course_id'], ['granted_by', 'granted_at']);
 
         return back()->with('success', 'Курсы назначены группе');
-    }
-
-    public function removeCourse(Organization $organization, Group $group, GroupCourse $groupCourse)
-    {
-        $this->authorize('consoleAction', $organization);
-        abort_unless($groupCourse->group_id === $group->id, 404);
-        $groupCourse->delete(); // событие deleted очистит StudentCourse
-        return back()->with('success', 'Курс удалён из группы');
     }
 
 // Назначение домашнего задания группе
@@ -249,25 +276,26 @@ class GroupController extends Controller
             ->where('organization_id', $organization->id)
             ->pluck('id');
 
-        foreach ($homeworkIds as $homeworkId) {
-            GroupHomework::create([
-                'group_id'       => $group->id,
-                'homework_id'    => $homeworkId,
-                'granted_by'     => auth()->user()->name ?? 'admin',
-                'granted_at'     => now(),
-            ]);
+        if ($homeworkIds->isEmpty()) {
+            return back()->with('error', 'Нет доступных ДЗ для назначения.');
         }
 
-        return back()->with('success', 'Домашние задания назначены группе');
-    }
+        // ✅ Массовое создание через upsert (1 SQL-запрос вместо N)
+        // Хук created в модели GroupHomework автоматически раздаст ДЗ студентам через upsert
+        $data = $homeworkIds->map(fn($homeworkId) => [
+            'group_id'     => $group->id,
+            'homework_id'  => $homeworkId,
+            'granted_by'   => auth()->user()->name ?? 'admin',
+            'granted_at'   => now(),
+        ])->toArray();
 
-// Удаление домашнего задания у группы
-    public function removeHomework(Organization $organization, Group $group, GroupHomework $groupHomework)
-    {
-        $this->authorize('consoleAction', $organization);
-        abort_unless($groupHomework->group_id === $group->id, 404);
-        $groupHomework->delete(); // событие deleted очистит StudentHomework
-        return back()->with('success', 'Домашнее задание удалено из группы');
+        GroupHomework::upsert(
+            $data,
+            ['group_id', 'homework_id'], // Уникальные ключи для проверки дубликатов
+            ['granted_by', 'granted_at'] // Колонки для обновления при совпадении
+        );
+
+        return back()->with('success', 'Домашние задания назначены группе');
     }
 
 // Назначение экзамена группе
@@ -285,24 +313,69 @@ class GroupController extends Controller
             ->where('organization_id', $organization->id)
             ->pluck('id');
 
-        foreach ($examIds as $examId) {
-            GroupExam::create([
-                'group_id'       => $group->id,
-                'exam_id'        => $examId,
-                'granted_by'     => auth()->user()->name ?? 'admin',
-                'granted_at'     => now(),
-            ]);
+        if ($examIds->isEmpty()) {
+            return back()->with('error', 'Нет доступных экзаменов для назначения.');
         }
+
+        // ✅ Массовое создание через upsert (1 SQL-запрос вместо N)
+        $data = $examIds->map(fn($examId) => [
+            'group_id'   => $group->id,
+            'exam_id'    => $examId,
+            'granted_by' => auth()->user()->name ?? 'admin',
+            'granted_at' => now(),
+        ])->toArray();
+
+        GroupExam::upsert(
+            $data,
+            ['group_id', 'exam_id'],
+            ['granted_by', 'granted_at']
+        );
 
         return back()->with('success', 'Экзамены назначены группе');
     }
 
-// Удаление экзамена у группы
+    public function removeCourse(Organization $organization, Group $group, GroupCourse $groupCourse)
+    {
+        $this->authorize('consoleAction', $organization);
+
+        // ✅ Проверка: принадлежит ли запись группе И организации
+        abort_unless($groupCourse->group_id === $group->id, 404);
+        abort_unless($group->organization_id === $organization->id, 404);
+
+        // Удаление записи group_course
+        // Хук deleted в модели GroupCourse автоматически удалит StudentCourse у всех студентов группы
+        $groupCourse->delete();
+
+        return back()->with('success', 'Курс удалён из группы');
+    }
+
+// Удаление домашнего задания из группы
+    public function removeHomework(Organization $organization, Group $group, GroupHomework $groupHomework)
+    {
+        $this->authorize('consoleAction', $organization);
+
+        // ✅ Проверка: принадлежит ли запись группе И организации
+        abort_unless($groupHomework->group_id === $group->id, 404);
+        abort_unless($group->organization_id === $organization->id, 404);
+
+        // Хук deleted в модели GroupHomework автоматически удалит StudentHomework у всех студентов группы
+        $groupHomework->delete();
+
+        return back()->with('success', 'Домашнее задание удалено из группы');
+    }
+
+// Удаление экзамена из группы
     public function removeExam(Organization $organization, Group $group, GroupExam $groupExam)
     {
         $this->authorize('consoleAction', $organization);
+
+        // ✅ Проверка: принадлежит ли запись группе И организации
         abort_unless($groupExam->group_id === $group->id, 404);
-        $groupExam->delete(); // событие deleted очистит StudentExam
+        abort_unless($group->organization_id === $organization->id, 404);
+
+        // Хук deleted в модели GroupExam автоматически удалит StudentExam у всех студентов группы
+        $groupExam->delete();
+
         return back()->with('success', 'Экзамен удалён из группы');
     }
 }

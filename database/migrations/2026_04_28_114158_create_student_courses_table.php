@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamp('granted_at')->useCurrent();
             $table->string('granted_by')->default('admin');
             $table->index('organization_id');
+            $table->index('course_id');
             $table->unique(['student_id', 'course_id']);
         });
     }

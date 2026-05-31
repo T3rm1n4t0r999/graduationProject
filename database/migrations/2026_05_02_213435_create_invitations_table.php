@@ -25,6 +25,11 @@ return new class extends Migration
             $table->timestamp('expires_at')->nullable();
 
             $table->timestamps();
+
+            $table->index(['organization_id', 'created_at']);
+            $table->index(['organization_id', 'status']);
+            $table->index(['organization_id', 'email', 'status']);
+            $table->index(['status', 'expires_at']);
         });
     }
 

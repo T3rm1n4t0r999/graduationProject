@@ -20,6 +20,8 @@ return new class extends Migration
 
             $table->unique(['user_id', 'organization_id']);
             $table->index('role');
+            $table->index(['organization_id', 'joined_at']);
+            $table->index(['organization_id', 'is_active']);
         });
     }
 

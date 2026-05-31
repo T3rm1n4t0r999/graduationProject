@@ -7,7 +7,6 @@ use App\Http\Requests\Course\CourseReorderRequest;
 use App\Http\Requests\Course\CourseStoreRequest;
 use App\Http\Requests\Course\CourseUpdateRequest;
 use App\Http\Resources\CourseResource;
-use App\Http\Resources\ModuleResource;
 use App\Http\Resources\OrganizationResource;
 use App\Models\Course;
 use App\Models\Organization;
@@ -18,7 +17,6 @@ use Inertia\Inertia;
 
 class CourseController extends Controller
 {
-
 
     public function index(Organization $organization, Request $request)
     {
@@ -36,11 +34,12 @@ class CourseController extends Controller
         ]);
 
         $courses = $organization->courses()
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                    // Убираем LOWER() и whereRaw, используем нативный LIKE
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             })
             ->when(isset($filters['is_active']), function ($q) use ($filters) {
@@ -69,7 +68,7 @@ class CourseController extends Controller
             }, function ($q) {
                 $q->orderBy('order'); // по умолчанию
             })
-            ->get();
+            ->paginate(20);
 
         return Inertia::render('Console/Course/List', [
             'organization' => new OrganizationResource($organization),
@@ -96,19 +95,34 @@ class CourseController extends Controller
 
     private function syncAutoAssign(Organization $organization, Course $course)
     {
-        if ($course->auto_assign) {
-            $students = $organization->students()->get();
-            foreach ($students as $student) {
-                StudentCourse::firstOrCreate([
-                    'student_id' => $student->id,
-                    'course_id' => $course->id,
-                ], [
-                    'organization_id' => $organization->id,
-                    'granted_by' => 'auto',
-                    'granted_at' => now(),
-                ]);
-            }
+        if (!$course->auto_assign) {
+            return;
         }
+
+        // 1. Загружаем только ID студентов (массив чисел), а не тяжелые Eloquent-модели
+        $studentIds = $organization->students()->pluck('id');
+
+        if ($studentIds->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+        // 2. Формируем массив данных для пакетной вставки
+        $data = $studentIds->map(fn($studentId) => [
+            'student_id'      => $studentId,
+            'course_id'       => $course->id,
+            'organization_id' => $organization->id,
+            'granted_by'      => 'auto',
+            'granted_at'      => $now,
+        ])->toArray();
+
+        // 3. upsert делает массовый INSERT.
+        // Если связь уже есть (уникальный ключ student_id + course_id), он обновит только granted_by и granted_at
+        StudentCourse::upsert(
+            $data,
+            ['student_id', 'course_id'], // Уникальные колонки для проверки дубликатов
+            ['granted_by', 'granted_at'] // Колонки для обновления при совпадении
+        );
     }
 
     /**
@@ -133,19 +147,18 @@ class CourseController extends Controller
     public function reorder(CourseReorderRequest $request, Organization $organization)
     {
         $this->authorize('consoleAction', $organization);
+        $validated = $request->validated();
 
-        $request->validated();
+        $updates = collect($validated['items'])->map(fn($item) => [
+            'id'    => $item['id'],
+            'order' => $item['order'],
+        ])->toArray();
 
-        DB::transaction(function () use ($request, $organization) {
-            foreach ($request->items as $item) {
-                Course::where('id', $item['id'])
-                    ->where('organization_id', $organization->id)
-                    ->update(['order' => $item['order']]);
-            }
-        });
+        // ✅ Один SQL-запрос (INSERT ... ON DUPLICATE KEY UPDATE)
+        Course::upsert($updates, ['id'], ['order']);
 
         return redirect()
-            ->route('course.index', new OrganizationResource($organization))
+            ->route('course.index', $organization) // Передаем модель, а не Resource
             ->with('success', 'Порядок курсов обновлён');
     }
 

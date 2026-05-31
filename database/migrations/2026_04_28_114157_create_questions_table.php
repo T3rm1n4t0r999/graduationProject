@@ -37,6 +37,7 @@ return new class extends Migration
 
             // Индексы
             $table->index('organization_id');
+            $table->index(['organization_id', 'is_active']);
             $table->index(['questionable_type', 'questionable_id', 'order']);
         });
     }

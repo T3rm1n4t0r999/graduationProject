@@ -29,61 +29,9 @@ class QuestionController extends Controller
     public function taskIndex(Organization $organization, Request $request)
     {
         $this->authorize('consoleAction', $organization);
+        [$questions, $filters] = $this->getFilteredQuestions($organization, $request, LessonTask::getMorphType(), 'task_id');
 
-        $filters = $request->validate([
-            'search'       => 'nullable|string|max:255',
-            'task_id'      => 'nullable|integer|exists:lesson_task,id',
-            'question_type'=> 'nullable|string|in:single_choice,multiple_choice,text,free_text',
-            'is_active'    => 'nullable|boolean',
-            'min_points'   => 'nullable|integer|min:0',
-            'max_points'   => 'nullable|integer|min:0',
-            'date_from'    => 'nullable|date',
-            'date_to'      => 'nullable|date|after_or_equal:date_from',
-            'sort'         => 'nullable|string|in:order,question,points,created_at',
-            'direction'    => 'nullable|string|in:asc,desc',
-        ]);
-
-        $questions = $organization->questions()
-            ->where('questionable_type', LessonTask::getMorphType())
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
-                $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(question) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(explanation) LIKE ?', ["%{$search}%"]);
-                });
-            })
-            ->when($request->filled('task_id'), function ($q) use ($request) {
-                $q->where('questionable_id', $request->task_id);
-            })
-            ->when($request->filled('question_type'), function ($q) use ($request) {
-                $q->where('question_type', $request->question_type);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('min_points'), function ($q) use ($request) {
-                $q->where('points', '>=', $request->min_points);
-            })
-            ->when($request->filled('max_points'), function ($q) use ($request) {
-                $q->where('points', '<=', $request->max_points);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                $q->orderBy($request->sort, $direction);
-            }, function ($q) {
-                $q->orderBy('order');
-            })
-            ->with('questionable')
-            ->paginate(15)
-            ->withQueryString();
-
-        $tasks = $organization->lessonTasks()->orderBy('title')->get();
+        $tasks = $organization->lessonTasks()->select(['id', 'title', 'organization_id', 'lesson_id'])->orderBy('title')->get();
 
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
@@ -94,65 +42,12 @@ class QuestionController extends Controller
         ]);
     }
 
-    // Вопросы домашних заданий
     public function homeworkIndex(Organization $organization, Request $request)
     {
         $this->authorize('consoleAction', $organization);
+        [$questions, $filters] = $this->getFilteredQuestions($organization, $request, Homework::getMorphType(), 'homework_id');
 
-        $filters = $request->validate([
-            'search'        => 'nullable|string|max:255',
-            'homework_id'   => 'nullable|integer|exists:homeworks,id',
-            'question_type' => 'nullable|string|in:single_choice,multiple_choice,text,free_text',
-            'is_active'     => 'nullable|boolean',
-            'min_points'    => 'nullable|integer|min:0',
-            'max_points'    => 'nullable|integer|min:0',
-            'date_from'     => 'nullable|date',
-            'date_to'       => 'nullable|date|after_or_equal:date_from',
-            'sort'          => 'nullable|string|in:order,question,points,created_at',
-            'direction'     => 'nullable|string|in:asc,desc',
-        ]);
-
-        $questions = $organization->questions()
-            ->where('questionable_type', Homework::getMorphType())
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
-                $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(question) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(explanation) LIKE ?', ["%{$search}%"]);
-                });
-            })
-            ->when($request->filled('homework_id'), function ($q) use ($request) {
-                $q->where('questionable_id', $request->homework_id);
-            })
-            ->when($request->filled('question_type'), function ($q) use ($request) {
-                $q->where('question_type', $request->question_type);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('min_points'), function ($q) use ($request) {
-                $q->where('points', '>=', $request->min_points);
-            })
-            ->when($request->filled('max_points'), function ($q) use ($request) {
-                $q->where('points', '<=', $request->max_points);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                $q->orderBy($request->sort, $direction);
-            }, function ($q) {
-                $q->orderBy('order');
-            })
-            ->with('questionable')
-            ->paginate(15)
-            ->withQueryString();
-
-        $homeworks = $organization->homeworks()->orderBy('title')->get();
+        $homeworks = $organization->homeworks()->select(['id', 'title', 'organization_id', 'lesson_id'])->orderBy('title')->get();
 
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
@@ -163,65 +58,12 @@ class QuestionController extends Controller
         ]);
     }
 
-    // Вопросы контрольных работ
     public function examIndex(Organization $organization, Request $request)
     {
         $this->authorize('consoleAction', $organization);
+        [$questions, $filters] = $this->getFilteredQuestions($organization, $request, Exam::getMorphType(), 'exam_id');
 
-        $filters = $request->validate([
-            'search'        => 'nullable|string|max:255',
-            'exam_id'       => 'nullable|integer|exists:exams,id',
-            'question_type' => 'nullable|string|in:single_choice,multiple_choice,text,free_text',
-            'is_active'     => 'nullable|boolean',
-            'min_points'    => 'nullable|integer|min:0',
-            'max_points'    => 'nullable|integer|min:0',
-            'date_from'     => 'nullable|date',
-            'date_to'       => 'nullable|date|after_or_equal:date_from',
-            'sort'          => 'nullable|string|in:order,question,points,created_at',
-            'direction'     => 'nullable|string|in:asc,desc',
-        ]);
-
-        $questions = $organization->questions()
-            ->where('questionable_type', Exam::getMorphType())
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
-                $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(question) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(explanation) LIKE ?', ["%{$search}%"]);
-                });
-            })
-            ->when($request->filled('exam_id'), function ($q) use ($request) {
-                $q->where('questionable_id', $request->exam_id);
-            })
-            ->when($request->filled('question_type'), function ($q) use ($request) {
-                $q->where('question_type', $request->question_type);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('min_points'), function ($q) use ($request) {
-                $q->where('points', '>=', $request->min_points);
-            })
-            ->when($request->filled('max_points'), function ($q) use ($request) {
-                $q->where('points', '<=', $request->max_points);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                $q->orderBy($request->sort, $direction);
-            }, function ($q) {
-                $q->orderBy('order');
-            })
-            ->with('questionable')
-            ->paginate(15)
-            ->withQueryString();
-
-        $exams = $organization->exams()->orderBy('title')->get();
+        $exams = $organization->exams()->select(['id', 'title', 'organization_id', 'module_id'])->orderBy('title')->get();
 
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
@@ -236,14 +78,14 @@ class QuestionController extends Controller
     {
         $this->authorize('consoleAction', $organization);
 
-        $questions = $organization
-            ->questions()
-            ->with('questionable')
+        // ✅ Пагинация вместо get() + предзагрузка imageFile для предотвращения N+1
+        $questions = $organization->questions()
+            ->with(['questionable', 'imageFile'])
             ->orderBy('order')
-            ->get();
+            ->paginate(20);
 
-        $lessonTasks = $organization
-            ->lessonTasks()
+        $lessonTasks = $organization->lessonTasks()
+            ->select(['id', 'title', 'organization_id', 'lesson_id'])
             ->get();
 
         return Inertia::render('Console/Question/List', [
@@ -258,14 +100,25 @@ class QuestionController extends Controller
         $this->authorize('consoleAction', $organization);
         abort_unless($question->organization_id === $organization->id, 404);
 
-        $question->load('questionable', 'files'); // ← добавили 'files'
-
+        // ✅ Предзагружаем файлы и картинку
+        $question->load(['questionable', 'files', 'imageFile']);
 
         $currentParent = $question->questionable;
         $relatedItemsCollection = collect();
+
+        // ✅ Оптимизированная загрузка родителей для выпадающего списка
         if ($currentParent instanceof LessonTask) {
-            $tasks = $organization->lessonTasks()->get();
-            $relatedItemsCollection = LessonTaskResource::collection($tasks);
+            $relatedItemsCollection = LessonTaskResource::collection(
+                $organization->lessonTasks()->select(['id', 'title', 'organization_id', 'lesson_id'])->get()
+            );
+        } elseif ($currentParent instanceof Homework) {
+            $relatedItemsCollection = HomeworkResource::collection(
+                $organization->homeworks()->select(['id', 'title', 'organization_id', 'lesson_id'])->get()
+            );
+        } elseif ($currentParent instanceof Exam) {
+            $relatedItemsCollection = ExamResource::collection(
+                $organization->exams()->select(['id', 'title', 'organization_id', 'module_id'])->get()
+            );
         }
 
         return Inertia::render('Console/Question/Show', [
@@ -275,26 +128,20 @@ class QuestionController extends Controller
         ]);
     }
 
+
     public function store(QuestionStoreRequest $request, Organization $organization)
     {
         $this->authorize('consoleAction', $organization);
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
 
+        // ✅ Защита от IDOR: проверяем, что родитель принадлежит организации
+        $this->validateParentBelongsToOrganization($validated, $organization);
+
         $question = Question::create($validated);
 
-        // Сохранение изображения
         if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $path = $file->store('questions/images', 'public');
-            $question->files()->create([
-                'name'      => $file->getClientOriginalName(),
-                'path'      => $path,
-                'disk'      => 'public',
-                'size'      => $file->getSize(),
-                'mime_type' => $file->getMimeType(),
-                'extension' => $file->getClientOriginalExtension(),
-            ]);
+            $this->handleFileUpload($question, $request->file('image'));
         }
 
         return back()->with('success', 'Вопрос успешно создан');
@@ -307,25 +154,14 @@ class QuestionController extends Controller
 
         $validated = $request->validated();
 
-        // Обработка изображения
-        if ($request->hasFile('image')) {
-            // Удаляем старое изображение (если было)
-            $oldImage = $question->image;
-            if ($oldImage) {
-                Storage::disk($oldImage->disk)->delete($oldImage->path);
-                $oldImage->delete();
-            }
+        // ✅ Защита от IDOR при смене родителя
+        if (isset($validated['questionable_id']) && isset($validated['questionable_type'])) {
+            $this->validateParentBelongsToOrganization($validated, $organization);
+        }
 
-            $file = $request->file('image');
-            $path = $file->store('questions/images', 'public');
-            $question->files()->create([
-                'name'      => $file->getClientOriginalName(),
-                'path'      => $path,
-                'disk'      => 'public',
-                'size'      => $file->getSize(),
-                'mime_type' => $file->getMimeType(),
-                'extension' => $file->getClientOriginalExtension(),
-            ]);
+        if ($request->hasFile('image')) {
+            $this->deleteOldFiles($question);
+            $this->handleFileUpload($question, $request->file('image'));
         }
 
         $question->update($validated);
@@ -337,6 +173,9 @@ class QuestionController extends Controller
     {
         $this->authorize('consoleAction', $organization);
         abort_unless($question->organization_id === $organization->id, 404);
+
+        // ✅ Удаляем файлы с диска перед удалением из БД
+        $this->deleteOldFiles($question);
 
         $question->delete();
 
@@ -352,23 +191,106 @@ class QuestionController extends Controller
         $validated = $request->validated();
         $params = $request->route()->parameters();
 
-        // Из параметров маршрута извлекаем модель задания, домашней работы или экзамена
         $questionable = collect($params)->first(fn($v) =>
             $v instanceof LessonTask || $v instanceof Homework || $v instanceof Exam
         );
 
         abort_unless($questionable && $questionable->organization_id === $organization->id, 404);
 
-        $questionableType = $questionable->getMorphClass();
-        $questionableId = $questionable->id;
+        // ✅ Один SQL-запрос (upsert) вместо N запросов в цикле
+        $updates = collect($validated['items'])->map(fn($item) => [
+            'id'    => $item['id'],
+            'order' => $item['order'],
+        ])->toArray();
 
-        foreach ($validated['items'] as $item) {
-            Question::where('id', $item['id'])
-                ->where('questionable_type', $questionableType)
-                ->where('questionable_id', $questionableId)
-                ->update(['order' => $item['order']]);
-        }
+        Question::upsert($updates, ['id'], ['order']);
 
         return back()->with('success', 'Порядок вопросов обновлен');
+    }
+
+
+    private function getFilteredQuestions(Organization $organization, Request $request, string $morphType, string $parentIdField): array
+    {
+        $filters = $request->validate([
+            'search'        => 'nullable|string|max:255',
+            $parentIdField  => "nullable|integer",
+            'question_type' => 'nullable|string|in:single_choice,multiple_choice,text,free_text',
+            'is_active'     => 'nullable|boolean',
+            'min_points'    => 'nullable|integer|min:0',
+            'max_points'    => 'nullable|integer|min:0',
+            'date_from'     => 'nullable|date',
+            'date_to'       => 'nullable|date|after_or_equal:date_from',
+            'sort'          => 'nullable|string|in:order,question,points,created_at',
+            'direction'     => 'nullable|string|in:asc,desc',
+        ]);
+
+        $questions = $organization->questions()
+            ->where('questionable_type', $morphType)
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
+                $q->where(function ($sub) use ($search) {
+                    // ✅ Нативный LIKE вместо LOWER() + whereRaw
+                    $sub->where('question', 'LIKE', "%{$search}%")
+                        ->orWhere('explanation', 'LIKE', "%{$search}%");
+                });
+            })
+            ->when(!empty($filters[$parentIdField]), fn($q) => $q->where('questionable_id', $filters[$parentIdField]))
+            ->when(!empty($filters['question_type']), fn($q) => $q->where('question_type', $filters['question_type']))
+            ->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']))
+            ->when(isset($filters['min_points']), fn($q) => $q->where('points', '>=', $filters['min_points']))
+            ->when(isset($filters['max_points']), fn($q) => $q->where('points', '<=', $filters['max_points']))
+            ->when(!empty($filters['date_from']), fn($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']), fn($q) => $q->whereDate('created_at', '<=', $filters['date_to']))
+            ->when(!empty($filters['sort']), function ($q) use ($filters) {
+                $q->orderBy($filters['sort'], $filters['direction'] ?? 'asc');
+            }, fn($q) => $q->orderBy('order'))
+            ->with(['questionable', 'imageFile']) // ✅ Предзагрузка для предотвращения N+1
+            ->paginate(15)
+            ->withQueryString();
+
+        return [$questions, $filters];
+    }
+
+    private function validateParentBelongsToOrganization(array $validated, Organization $organization): void
+    {
+        $type = $validated['questionable_type'] ?? null;
+        $id = $validated['questionable_id'] ?? null;
+
+        if (!$type || !$id) return;
+
+        $modelClass = Relation::getMorphedModel($type) ?: $type;
+
+        if (!in_array($modelClass, [LessonTask::class, Homework::class, Exam::class])) {
+            abort(400, 'Недопустимый тип родительского элемента.');
+        }
+
+        $modelClass::where('id', $id)
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+    }
+
+    private function handleFileUpload(Question $question, $file): void
+    {
+        $path = $file->store('questions/images', 'public');
+        $question->files()->create([
+            'name'      => $file->getClientOriginalName(),
+            'path'      => $path,
+            'disk'      => 'public',
+            'size'      => $file->getSize(),
+            'mime_type' => $file->getMimeType(),
+            'extension' => $file->getClientOriginalExtension(),
+        ]);
+    }
+
+    private function deleteOldFiles(Question $question): void
+    {
+        foreach ($question->files as $file) {
+            try {
+                Storage::disk($file->disk)->delete($file->path);
+            } catch (\Exception $e) {
+                logger()->error('Failed to delete question file: ' . $file->path);
+            }
+            $file->delete();
+        }
     }
 }

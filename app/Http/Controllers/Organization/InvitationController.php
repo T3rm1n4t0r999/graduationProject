@@ -25,9 +25,20 @@ class InvitationController extends Controller
     public function store(InvitationStoreRequest $request)
     {
         $validated = $request->validated();
-        if (empty($validated['expires_at'])) {
-            $validated['expires_at'] = now()->addDays(7);
+
+        // 1. Защита от спама: проверяем, нет ли уже активного приглашения
+        $exists = Invitation::where('organization_id', $validated['organization_id'])
+            ->where('email', $validated['email'])
+            ->where('status', 'pending')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', 'Активное приглашение на этот email уже существует.');
         }
+
         try {
             return DB::transaction(function () use ($validated) {
                 $invitation = Invitation::create([
@@ -36,13 +47,12 @@ class InvitationController extends Controller
                     'organization_id' => $validated['organization_id'],
                     'type'            => $validated['type'],
                     'status'          => 'pending',
-                    'token'           => Str::random(16),
-                    'expires_at'      => $validated['expires_at'],
+                    'token'           => Str::random(64), // Увеличиваем до 64 символов!
+                    'expires_at'      => $validated['expires_at'] ?? now()->addDays(7),
                     'limited'         => $validated['limited'] ?? false,
                 ]);
 
                 $acceptUrl = route('invitation.accept', ['token' => $invitation->token]);
-
                 Mail::to($invitation->email)->queue(new InvitationMail($invitation, $acceptUrl));
 
                 return back()->with('success', 'Приглашение отправлено на почту.');
@@ -79,38 +89,47 @@ class InvitationController extends Controller
      */
     public function destroy(Invitation $invitation)
     {
+        // Проверяем, имеет ли текущий пользователь право управлять организацией этого приглашения
+        $this->authorize('manage', $invitation->organization);
+
         $invitation->delete();
+
+        // Обязательно возвращаем ответ, иначе фронтенд не поймет, что операция успешна
+        return back()->with('success', 'Приглашение удалено.');
     }
 
     public function accept(string $token)
     {
-        $invitation = Invitation::where('token', $token)->firstOrFail();
+        // 1. Eager loading организации (убирает 1 лишний SQL-запрос)
+        $invitation = Invitation::with('organization')->where('token', $token)->firstOrFail();
 
         if ($invitation->status !== 'pending') {
-            return redirect()->route('dashboard')
-                ->with('error', 'Приглашение уже использовано или отменено.');
+            return redirect()->route('dashboard')->with('error', 'Приглашение уже использовано или отменено.');
         }
 
         if ($invitation->expires_at && $invitation->expires_at->isPast()) {
-            return redirect()->route('dashboard')
-                ->with('error', 'Срок действия приглашения истёк.');
+            return redirect()->route('dashboard')->with('error', 'Срок действия приглашения истёк.');
         }
 
         if (auth()->check()) {
             $user = auth()->user();
+
             if ($user->email !== $invitation->email) {
-                return redirect()->route('dashboard')
-                    ->with('error', 'Это приглашение предназначено для другого email.');
+                return redirect()->route('dashboard')->with('error', 'Это приглашение предназначено для другого email.');
             }
 
-            // Присоединяем пользователя к организации
-            $invitation->organization->users()->attach($user->id, [
-                'role'      => $invitation->type,
-                'is_active' => true,
-                'joined_at' => now(),
-            ]);
+            DB::transaction(function () use ($invitation, $user) {
 
-            $invitation->update(['status' => 'accepted', 'accepted_at' => now()]);
+                $invitation->organization->users()->syncWithoutDetaching([
+                    $user->id => [
+                        'role'      => $invitation->type,
+                        'is_active' => true,
+                        'joined_at' => now(),
+                    ]
+                ]);
+
+                $invitation->update(['status' => 'accepted', 'accepted_at' => now()]);
+            });
 
             return redirect()->route('organization.show', $invitation->organization)
                 ->with('success', 'Вы присоединились к организации!');

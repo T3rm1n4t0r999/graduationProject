@@ -22,10 +22,9 @@ class ExamController extends Controller
     {
         $this->authorize('consoleAction', $organization);
 
-        // Валидация фильтров
         $filters = $request->validate([
             'search'        => 'nullable|string|max:255',
-            'modules_id'     => 'nullable|integer|exists:modules,id',
+            'module_id'     => 'nullable|integer|exists:modules,id',
             'is_active'     => 'nullable|boolean',
             'date_from'     => 'nullable|date',
             'date_to'       => 'nullable|date|after_or_equal:date_from',
@@ -35,59 +34,49 @@ class ExamController extends Controller
             'direction'     => 'nullable|string|in:asc,desc',
         ]);
 
-        // Запрос экзаменов с фильтрацией
         $exams = $organization->exams()
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                    // ✅ Нативный LIKE вместо LOWER() + whereRaw (игнорирует индексы)
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             })
-            ->when($request->filled('module_id'), function ($q) use ($request) {
-                $q->where('module_id', $request->module_id);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
+            ->when(!empty($filters['module_id']), fn($q) => $q->where('module_id', $filters['module_id']))
+            ->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']))
+            ->when(!empty($filters['date_from']), fn($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']), fn($q) => $q->whereDate('created_at', '<=', $filters['date_to']))
             ->withCount('questions')
-            ->when($request->filled('min_questions'), function ($q) use ($request) {
-                $q->has('questions', '>=', $request->min_questions);
-            })
-            ->when($request->filled('max_questions'), function ($q) use ($request) {
-                $q->has('questions', '<=', $request->max_questions);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                $q->orderBy($request->sort, $direction);
-            }, function ($q) {
-                $q->orderByDesc('created_at');
-            })
-            ->with('module')
+            ->when(isset($filters['min_questions']), fn($q) => $q->has('questions', '>=', $filters['min_questions']))
+            ->when(isset($filters['max_questions']), fn($q) => $q->has('questions', '<=', $filters['max_questions']))
+            ->when(!empty($filters['sort']), function ($q) use ($filters) {
+                $direction = $filters['direction'] ?? 'asc';
+                $q->orderBy($filters['sort'], $direction);
+            }, fn($q) => $q->orderByDesc('created_at'))
+            ->with('module') // ✅ Предотвращает N+1 при рендеринге
             ->paginate(15)
             ->withQueryString();
 
-        // Все модули для фильтра (можно выбрать любой)
-        $allModules = $organization->modules()->orderBy('title')->get();
-
-        // Занятые модули (уже есть экзамен) – для ограничения формы создания
-        $occupiedModuleIds = $exams->pluck('module_id')->unique()->toArray();
+        // ✅ 1 SQL-запрос вместо 2-х. БД сама находит модули без экзаменов через NOT EXISTS.
+        // PHP не загружает массив ID в память.
         $freeModules = $organization->modules()
-            ->whereNotIn('id', $occupiedModuleIds)
+            ->whereDoesntHave('exam')
+            ->select(['id', 'title', 'organization_id', 'course_id'])
             ->orderByDesc('created_at')
+            ->get();
+
+        // ✅ select() для экономии памяти при передаче на фронтенд для фильтров
+        $allModules = $organization->modules()
+            ->select(['id', 'title', 'organization_id', 'course_id'])
+            ->orderBy('title')
             ->get();
 
         return Inertia::render('Console/Exam/List', [
             'organization'  => new OrganizationResource($organization),
             'exams'         => ExamResource::collection($exams),
-            'modules'       => ModuleResource::collection($allModules),   // для фильтра
-            'freeModules'   => ModuleResource::collection($freeModules),  // для формы создания
+            'modules'       => ModuleResource::collection($allModules),
+            'freeModules'   => ModuleResource::collection($freeModules),
             'filters'       => $filters,
         ]);
     }
@@ -102,22 +91,20 @@ class ExamController extends Controller
             'questions' => fn($q) => $q->orderBy('order'),
         ]);
 
-        $occupiedModuleIds = Exam::where('organization_id', $organization->id)
-            ->where('id', '!=', $exam->id)
-            ->pluck('module_id')
-            ->unique()
-            ->toArray();
-
+        // ✅ Получаем модули, у которых НЕТ экзамена, ИЛИ он принадлежит текущему exam
         $availableModules = $organization->modules()
-            ->whereNotIn('id', $occupiedModuleIds)
-            ->orWhere('id', $exam->module_id)
+            ->where(function ($q) use ($exam) {
+                $q->whereDoesntHave('exam')
+                    ->orWhereHas('exam', fn($e) => $e->where('id', $exam->id));
+            })
+            ->select(['id', 'title', 'organization_id', 'course_id'])
             ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('Console/Exam/Show', [
             'organization' => new OrganizationResource($organization),
-            'exam'     => new ExamResource($exam),
-            'modules'     => ModuleResource::collection($availableModules),
+            'exam'         => new ExamResource($exam),
+            'modules'      => ModuleResource::collection($availableModules),
         ]);
     }
 
@@ -127,11 +114,12 @@ class ExamController extends Controller
 
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
-        $validated['max_attempts'] = $validated['max_attempts'] ? $validated['max_attempts'] : 0;
-        $module = Module::findOrFail($validated['module_id']);
-        if ($module->organization_id !== $organization->id) {
-            abort(403, 'Модуль не принадлежит данной организации.');
-        }
+        $validated['max_attempts'] = $validated['max_attempts'] ?? 0;
+
+        // ✅ 1 запрос вместо 2-х (Поиск + Проверка принадлежности)
+        Module::where('id', $validated['module_id'])
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
 
         Exam::create($validated);
 
@@ -145,10 +133,10 @@ class ExamController extends Controller
 
         $validated = $request->validated();
 
-        $module = Module::findOrFail($validated['module_id']);
-        if ($module->organization_id !== $organization->id) {
-            abort(403, 'Модуль не принадлежит данной организации.');
-        }
+        // ✅ 1 запрос вместо 2-х
+        Module::where('id', $validated['module_id'])
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
 
         $exam->update($validated);
 

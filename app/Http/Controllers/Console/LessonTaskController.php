@@ -25,61 +25,50 @@ class LessonTaskController extends Controller
         $this->authorize('consoleAction', $organization);
 
         $filters = $request->validate([
-            'search'       => 'nullable|string|max:255',
-            'lesson_id'    => 'nullable|integer|exists:lessons,id',
-            'is_active'    => 'nullable|boolean',
-            'date_from'    => 'nullable|date',
-            'date_to'      => 'nullable|date|after_or_equal:date_from',
-            'min_questions'=> 'nullable|integer|min:0',
-            'max_questions'=> 'nullable|integer|min:0',
-            'sort'         => 'nullable|string|in:order,title,lesson_title,created_at,questions_count',
-            'direction'    => 'nullable|string|in:asc,desc',
+            'search'        => 'nullable|string|max:255',
+            'lesson_id'     => 'nullable|integer|exists:lessons,id',
+            'is_active'     => 'nullable|boolean',
+            'date_from'     => 'nullable|date',
+            'date_to'       => 'nullable|date|after_or_equal:date_from',
+            'min_questions' => 'nullable|integer|min:0',
+            'max_questions' => 'nullable|integer|min:0',
+            'sort'          => 'nullable|string|in:order,title,lesson_title,created_at,questions_count',
+            'direction'     => 'nullable|string|in:asc,desc',
         ]);
 
         $lessonTasks = $organization->lessonTasks()
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                    // Нативный LIKE в MySQL (utf8mb4_unicode_ci) нечувствителен к регистру
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             })
-            ->when($request->filled('lesson_id'), function ($q) use ($request) {
-                $q->where('lesson_id', $request->lesson_id);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
+            ->when(!empty($filters['lesson_id']), fn($q) => $q->where('lesson_id', $filters['lesson_id']))
+            ->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']))
+            ->when(!empty($filters['date_from']), fn($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']), fn($q) => $q->whereDate('created_at', '<=', $filters['date_to']))
             ->withCount('questions')
-            ->when($request->filled('min_questions'), function ($q) use ($request) {
-                $q->has('questions', '>=', $request->min_questions);
-            })
-            ->when($request->filled('max_questions'), function ($q) use ($request) {
-                $q->has('questions', '<=', $request->max_questions);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                if ($request->sort === 'lesson_title') {
-                    $q->join('lessons', 'lesson_tasks.lesson_id', '=', 'lessons.id')
+            ->when(isset($filters['min_questions']), fn($q) => $q->has('questions', '>=', $filters['min_questions']))
+            ->when(isset($filters['max_questions']), fn($q) => $q->has('questions', '<=', $filters['max_questions']))
+            ->when(!empty($filters['sort']), function ($q) use ($filters) {
+                $direction = $filters['direction'] ?? 'asc';
+                if ($filters['sort'] === 'lesson_title') {
+                    $q->join('lessons', 'lesson_task.lesson_id', '=', 'lessons.id')
                         ->orderBy('lessons.title', $direction)
-                        ->select('lesson_tasks.*');
-                } elseif ($request->sort === 'questions_count') {
-                    $q->orderBy('questions_count', $direction);
+                        ->select('lesson_task.*');
                 } else {
-                    $q->orderBy($request->sort, $direction);
+                    $q->orderBy($filters['sort'], $direction);
                 }
-            }, function ($q) {
-                $q->orderBy('order');
-            })
-            ->get();
+            }, fn($q) => $q->orderBy('order'))
+            ->paginate(20); // ✅ Пагинация вместо get()
 
-        $lessons = $organization->lessons()->orderBy('title')->get();
+        // ✅ select() вместо get() — загружаем только нужные поля для <select>
+        $lessons = $organization->lessons()
+            ->select(['id', 'title', 'organization_id', 'module_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/LessonTask/List', [
             'organization' => new OrganizationResource($organization),
@@ -88,23 +77,27 @@ class LessonTaskController extends Controller
             'filters'      => $filters,
         ]);
     }
+
     public function show(Organization $organization, LessonTask $task)
     {
         $this->authorize('consoleAction', $organization);
         abort_unless($task->organization_id === $organization->id, 404);
 
-        $task->load(['questions' => function ($query) {
-            $query->orderBy('order');
-        }]);
+        $task->load(['questions' => fn($query) => $query->orderBy('order')]);
 
-        $lessons = $organization->lessons()->get();
+        // ✅ select() для экономии памяти
+        $lessons = $organization->lessons()
+            ->select(['id', 'title', 'organization_id', 'module_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/LessonTask/Show', [
             'organization' => new OrganizationResource($organization),
-            'task' => new LessonTaskResource($task),
-            'lessons' => LessonResource::collection($lessons),
+            'task'         => new LessonTaskResource($task),
+            'lessons'      => LessonResource::collection($lessons),
         ]);
     }
+
 
     public function store(LessonTaskStoreRequest $request, Organization $organization)
     {
@@ -119,17 +112,31 @@ class LessonTaskController extends Controller
     }
 
 
+
     public function update(LessonTaskUpdateRequest $request, Organization $organization, LessonTask $task)
     {
         $this->authorize('consoleAction', $organization);
         abort_unless($task->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
+
+        // ✅ Проверка: если lesson_id меняется, проверяем принадлежность организации
+        if (isset($validated['lesson_id']) && $validated['lesson_id'] !== $task->lesson_id) {
+            $newLesson = Lesson::where('id', $validated['lesson_id'])
+                ->where('organization_id', $organization->id)
+                ->firstOrFail();
+
+            // При переносе в другой урок ставим в конец (без сдвига старых)
+            $validated['order'] = (LessonTask::where('lesson_id', $newLesson->id)->max('order') ?? 0) + 1;
+        }
+
         $task->update($validated);
+
+        // ✅ Автоматически пересчитываем max_score, если это необходимо
+        $task->recalculateMaxScore();
 
         return back()->with('success', 'Задание успешно обновлено');
     }
-
     public function destroy(Organization $organization, LessonTask $task)
     {
         $this->authorize('consoleAction', $organization);
@@ -149,13 +156,13 @@ class LessonTaskController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(function () use ($validated, $lesson) {
-            foreach ($validated['items'] as $item) {
-                LessonTask::where('id', $item['id'])
-                    ->where('lesson_id', $lesson->id)
-                    ->update(['order' => $item['order']]);
-            }
-        });
+        // ✅ Один SQL-запрос вместо N запросов в цикле
+        $updates = collect($validated['items'])->map(fn($item) => [
+            'id'    => $item['id'],
+            'order' => $item['order'],
+        ])->toArray();
+
+        LessonTask::upsert($updates, ['id'], ['order']);
 
         return back()->with('success', 'Порядок заданий обновлен');
     }

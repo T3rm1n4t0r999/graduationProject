@@ -55,6 +55,9 @@ class Question extends Model
 
     public function getImageAttribute(): ?File
     {
+        if ($this->relationLoaded('imageFile')) {
+            return $this->getRelation('imageFile');
+        }
         return $this->imageFile()->first();
     }
 
@@ -94,17 +97,7 @@ class Question extends Model
         });
 
         static::deleted(function (Question $question) {
-            static::where('questionable_type', $question->questionable_type)
-                ->where('questionable_id', $question->questionable_id)
-                ->where('order', '>', $question->order)
-                ->decrement('order');
             static::updateParentMaxScore($question->questionable_type, $question->questionable_id);
-        });
-
-        static::updating(function (Question $question) {
-            $question->order = static::where('questionable_type', $question->questionable_type)
-                    ->where('questionable_id', $question->questionable_id)
-                    ->max('order') + 1;
         });
 
         static::updated(function (Question $question) {
@@ -114,20 +107,12 @@ class Question extends Model
             $newParentType = $question->questionable_type;
             $newParentId   = $question->questionable_id;
 
-            // 1. Изменился родительский элемент
             if ($oldParentType !== $newParentType || $oldParentId !== $newParentId) {
-                if ($oldParentType && $oldParentId) {
-                    static::updateParentMaxScore($oldParentType, $oldParentId);
-                }
-                if ($newParentType && $newParentId) {
-                    static::updateParentMaxScore($newParentType, $newParentId);
-                }
-            }
-            // 2. Изменились баллы, но родитель остался тем же
-            elseif ($question->isDirty('points')) {
-                if ($newParentType && $newParentId) {
-                    static::updateParentMaxScore($newParentType, $newParentId);
-                }
+                if ($oldParentType && $oldParentId) static::updateParentMaxScore($oldParentType, $oldParentId);
+                if ($newParentType && $newParentId) static::updateParentMaxScore($newParentType, $newParentId);
+            } elseif ($question->isDirty('points') || $question->isDirty('is_active')) {
+                // ✅ Добавлена проверка isDirty('is_active'), так как неактивные вопросы не должны учитываться в max_score
+                if ($newParentType && $newParentId) static::updateParentMaxScore($newParentType, $newParentId);
             }
         });
     }

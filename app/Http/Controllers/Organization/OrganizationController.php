@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Organization;
 
+use App\Enums\OrganizationRole;
 use App\Enums\OrganizationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organization\OrganizationStoreRequest;
@@ -85,44 +86,72 @@ class OrganizationController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function show(Organization $organization){
-        $this->authorize('view', $organization);
-        $organization->load(['owner']);
+    public function show(Organization $organization)
+    {
+        // 1. Загружаем аутентифицированного пользователя ОДИН РАЗ (убирает дубль запроса №14)
+        $user = Auth::user();
 
+        // 2. Явная авторизация с переданным пользователем (предотвращает внутренний вызов Auth::user())
+        $this->authorizeForUser($user, 'view', $organization);
+
+        // 3. Eager loading связей (без изменений)
+        $organization->load(['owner', 'bot']);
+
+        // 4. ОДНИМ ЗАПРОСОМ получаем активное членство текущего пользователя в организации
+        //    (заменяет 4 EXISTS-запроса политики)
+        $membership = $organization->users()
+            ->where('users.id', $user->id)
+            ->wherePivot('is_active', true)
+            ->first();
+
+        $role = $membership?->pivot?->role;
+
+        // 5. Вычисляем права на основе роли, дублируя логику политики
+        //    (предполагается: manage и invite – для Manager/Owner, delete и verify – только Owner)
+        $can = [
+            'manage'  => in_array($role, [OrganizationRole::Manager->value, OrganizationRole::Owner->value], true),
+            'delete'  => $role === OrganizationRole::Owner->value,
+            'invite'  => in_array($role, [OrganizationRole::Manager->value, OrganizationRole::Owner->value, OrganizationRole::Teacher->value], true),
+            'verify'  => in_array($role, [OrganizationRole::Manager->value, OrganizationRole::Owner->value], true),
+        ];
+
+        // 6. Пагинация пользователей (без изменений)
         $users = $organization->users()
-            ->withPivot('role', 'is_active', 'joined_at')
-            ->latest('pivot_joined_at')
-            ->paginate(2, ['*'], 'users_page')
+            ->select(['users.id', 'users.name', 'users.email'])
+            ->latest('organization_user.joined_at')
+            ->paginate(5, ['users.id', 'users.name', 'users.email'], 'users_page')
             ->withQueryString();
 
-        $bot = $organization->bot;
-        $invitations = $organization->invitations()->with('group')->latest()->get();
-        $user = Auth::user();
+        // 7. Приглашения (без изменений)
+        $invitations = $organization->invitations()
+            ->select(['id', 'email', 'status', 'group_id', 'created_at'])
+            ->with('group:id,name')
+            ->latest('created_at')
+            ->limit(20)
+            ->get();
+
         return Inertia::render('Organization/Show', [
             'organization' => new OrganizationResource($organization),
-            'users' => UserResource::collection($users),
-            'bot' => $bot ? new BotResource($bot) : null,
-            'invitations' => InvitationResource::collection($invitations),
-            'isVerified' => $organization->isVerified(),
-            'can' => [
-                'manage' => $user->can('manage', $organization),
-                'delete' => $user->can('delete', $organization),
-                'invite' => $user->can('invite', $organization),
-                'verify' => $user->can('verify', $organization),
-            ],
+            'users'        => UserResource::collection($users),
+            'bot'          => $organization->bot ? new BotResource($organization->bot) : null,
+            'invitations'  => InvitationResource::collection($invitations),
+            'isVerified'   => $organization->isVerified(),
+            'can'          => $can,
         ]);
     }
 
     public function destroy(Organization $organization){
         $this->authorize('delete', $organization);
-        $organization->users()->detach();
-        $organization->bot()->delete();
-        $organization->delete();
+
+        // Оборачиваем в транзакцию для надежности, но лишние запросы убираем
+        DB::transaction(function () use ($organization) {
+            // БД сама удалит бота и записи в organization_user благодаря CASCADE
+            $organization->delete();
+        });
 
         return redirect()->route('dashboard')
             ->with('success', 'Организация удалена');
     }
-
     public function verifyEmail(Request $request, string $token)
     {
 

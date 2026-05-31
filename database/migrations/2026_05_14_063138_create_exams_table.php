@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->integer('max_score')->nullable()->default(0);
-            $table->foreignId('module_id')
+            $table->foreignId('module_id')->unique()
                 ->constrained('modules')
                 ->onDelete('cascade');
             $table->foreignId('organization_id')
@@ -30,6 +30,7 @@ return new class extends Migration
             // Optional: add indexes for foreign keys
             $table->index('module_id');
             $table->index('organization_id');
+            $table->index(['organization_id', 'is_active']);
         });
     }
 

@@ -33,21 +33,19 @@ class Course extends Model
         return $this->belongsTo(Organization::class);
     }
 
+    public function students(): HasMany
+    {
+        return $this->hasMany(StudentCourse::class);
+    }
+
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function (Course $course) {
             if (empty($course->order)) {
-                $course->order = static::where('organization_id', $course->organization_id)
-                        ->max('order') + 1;
+                $course->order = static::where('organization_id', $course->organization_id)->max('order') + 1;
             }
-        });
-
-        static::deleted(function (Course $course) {
-            Course::where('organization_id', $course->organization_id)
-                ->where('order', '>', $course->order)
-                ->decrement('order');
         });
     }
 }

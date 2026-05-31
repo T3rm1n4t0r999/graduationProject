@@ -17,7 +17,10 @@ return new class extends Migration
             $table->foreignId('course_id')->constrained('courses')->cascadeOnDelete();
             $table->timestamp('granted_at')->useCurrent();
             $table->string('granted_by')->nullable();
-            $table->unique(['group_id', 'course_id']);
+            $table->unique(['group_id', 'course_id'], 'group_course_unique');
+
+            // ✅ Индекс для поиска всех групп с конкретным курсом
+            $table->index('course_id');
         });
     }
 

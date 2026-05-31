@@ -15,6 +15,7 @@ return new class extends Migration
             $table->foreignId('group_id')->constrained('groups')->cascadeOnDelete();
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
             $table->primary(['group_id', 'student_id']);
+            $table->index('student_id');
         });
     }
 

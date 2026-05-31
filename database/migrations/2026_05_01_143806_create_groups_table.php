@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('specialty')->nullable();
             $table->string('code', 5)->unique()->nullable();
             $table->timestamps();
+
+            $table->index('organization_id');
         });
     }
 

@@ -55,11 +55,5 @@ class LessonMaterial extends Model
                         ->max('order') + 1;
             }
         });
-
-        static::deleted(function (LessonMaterial $material) {
-            LessonMaterial::where('lesson_id', $material->lesson_id)
-                ->where('order', '>', $material->order)
-                ->decrement('order');
-        });
     }
 }

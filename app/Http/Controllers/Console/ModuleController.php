@@ -44,76 +44,65 @@ class ModuleController extends Controller
         ]);
 
         $modules = $organization->modules()
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = strtolower($request->search);
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(description) LIKE ?', ["%{$search}%"]);
+                    // Убрали LOWER() и whereRaw, используем нативный LIKE
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             })
-            ->when($request->filled('course_id'), function ($q) use ($request) {
-                $q->where('course_id', $request->course_id);
-            })
-            ->when(isset($filters['is_active']), function ($q) use ($filters) {
-                $q->where('is_active', $filters['is_active']);
-            })
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            })
+            ->when(!empty($filters['course_id']), fn($q) => $q->where('course_id', $filters['course_id']))
+            ->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']))
+            ->when(!empty($filters['date_from']), fn($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']), fn($q) => $q->whereDate('created_at', '<=', $filters['date_to']))
             ->withCount('lessons')
-            ->when($request->filled('min_lessons'), function ($q) use ($request) {
-                $q->has('lessons', '>=', $request->min_lessons);
-            })
-            ->when($request->filled('max_lessons'), function ($q) use ($request) {
-                $q->has('lessons', '<=', $request->max_lessons);
-            })
-            ->when($request->filled('sort'), function ($q) use ($request) {
-                $direction = $request->direction ?? 'asc';
-                if ($request->sort === 'course_title') {
+            ->when(!empty($filters['min_lessons']), fn($q) => $q->has('lessons', '>=', $filters['min_lessons']))
+            ->when(!empty($filters['max_lessons']), fn($q) => $q->has('lessons', '<=', $filters['max_lessons']))
+            ->when(!empty($filters['sort']), function ($q) use ($filters) {
+                $direction = $filters['direction'] ?? 'asc';
+                if ($filters['sort'] === 'course_title') {
                     $q->join('courses', 'modules.course_id', '=', 'courses.id')
                         ->orderBy('courses.title', $direction)
                         ->select('modules.*');
-                } elseif ($request->sort === 'lessons_count') {
-                    $q->orderBy('lessons_count', $direction);
                 } else {
-                    $q->orderBy($request->sort, $direction);
+                    $q->orderBy($filters['sort'] === 'lessons_count' ? 'lessons_count' : $filters['sort'], $direction);
                 }
-            }, function ($q) {
-                $q->orderBy('order');
-            })
-            ->get();
+            }, fn($q) => $q->orderBy('order'))
+            ->paginate(20); // ✅ Пагинация вместо get()
 
-        $courses = $organization->courses()->orderBy('title')->get();
+        // ✅ pluck возвращает коллекцию [id => title], что идеально для <select> и экономит память
+        $courses = $organization->courses()->orderBy('title')->pluck('title', 'id');
 
         return Inertia::render('Console/Module/List', [
             'organization' => new OrganizationResource($organization),
-            'courses'      => CourseResource::collection($courses),
+            'courses'      => $courses, // Передаем как массив/коллекцию, а не Resource
             'modules'      => ModuleResource::collection($modules),
             'filters'      => $filters,
         ]);
     }
+
 
     public function show(Organization $organization, Module $module)
     {
         $this->authorize('consoleAction', $organization);
         abort_unless($module->organization_id === $organization->id, 404);
 
-        $module->load(['lessons' => function ($query) {
-            $query->orderBy('order');
-        }]);
+        // ✅ Объединили загрузку связей в один запрос
+        $module->load([
+            'lessons' => fn($query) => $query->orderBy('order'),
+            'exam'
+        ]);
 
-        $module->load('exam');
+        $courses = $organization->courses()->pluck('title', 'id');
 
-        $courses = $organization->courses()->get();
         return Inertia::render('Console/Module/Show', [
             'organization' => new OrganizationResource($organization),
             'module'       => new ModuleResource($module),
-            'courses'      => CourseResource::collection($courses),
+            'courses'      => $courses,
         ]);
     }
+
 
     public function store(ModuleStoreRequest $request, Organization $organization)
     {
@@ -134,31 +123,20 @@ class ModuleController extends Controller
         abort_unless($module->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
-
         $newCourseId = $validated['course_id'] ?? $module->course_id;
-        $course = Course::findOrFail($newCourseId);
-        if ($course->organization_id !== $organization->id) {
-            abort(403, 'Курс не принадлежит данной организации.');
+
+        // ✅ 1 запрос вместо 2 (findOrFail + ручная проверка organization_id)
+        $course = Course::where('id', $newCourseId)
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+
+        // Если курс изменился, просто ставим в конец (без сдвига старых)
+        if ($module->course_id !== $course->id) {
+            $validated['order'] = (Module::where('course_id', $course->id)->max('order') ?? 0) + 1;
         }
 
-        DB::transaction(function () use ($module, $validated, $course) {
-            $oldCourseId = $module->course_id;
-            $oldOrder    = $module->order;
-            $isCourseChanged = $oldCourseId != $course->id;
+        $module->update($validated);
 
-            if ($isCourseChanged) {
-                // При переносе в другой курс ставим модуль в конец
-                $maxOrder = Module::where('course_id', $course->id)->max('order') ?? 0;
-                $validated['order'] = $maxOrder + 1;
-
-                // Сдвигаем порядки в старом курсе (все, что > старого order, уменьшаем на 1)
-                Module::where('course_id', $oldCourseId)
-                    ->where('order', '>', $oldOrder)
-                    ->decrement('order');
-            }
-
-            $module->update($validated);
-        });
         return back()->with('success', 'Модуль успешно обновлён');
     }
 
@@ -174,6 +152,7 @@ class ModuleController extends Controller
         ])->with('success', 'Модуль успешно удалён');
     }
 
+
     public function reorder(ModuleReorderRequest $request, Organization $organization, Course $course)
     {
         $this->authorize('consoleAction', $organization);
@@ -181,13 +160,13 @@ class ModuleController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(function () use ($validated, $course) {
-            foreach ($validated['items'] as $item) {
-                Module::where('id', $item['id'])
-                    ->where('course_id', $course->id)
-                    ->update(['order' => $item['order']]);
-            }
-        });
+        // ✅ Один SQL-запрос вместо N запросов в цикле
+        $updates = collect($validated['items'])->map(fn($item) => [
+            'id'    => $item['id'],
+            'order' => $item['order'],
+        ])->toArray();
+
+        Module::upsert($updates, ['id'], ['order']);
 
         return back()->with('success', 'Порядок модулей обновлён');
     }

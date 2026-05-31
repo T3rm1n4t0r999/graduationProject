@@ -25,10 +25,12 @@ class StudentController extends Controller
     {
         $this->authorize('consoleAction', $organization);
 
+        // ✅ Пагинация вместо get() + select() для экономии памяти
         $students = $organization->students()
+            ->select(['id', 'telegram_id', 'username', 'firstname', 'lastname', 'role', 'score', 'rank', 'organization_id'])
             ->withCount(['courses', 'homeworks', 'exams'])
-            ->with('groups')
-            ->get();
+            ->with('groups:id,name') // Загружаем только id и name групп
+            ->paginate(20);
 
         return Inertia::render('Console/Student/List', [
             'organization' => new OrganizationResource($organization),
@@ -36,7 +38,6 @@ class StudentController extends Controller
         ]);
     }
 
-    // Просмотр одного студента + его связи
     public function show(Organization $organization, Student $student)
     {
         $this->authorize('consoleAction', $organization);
@@ -49,22 +50,21 @@ class StudentController extends Controller
             'groups',
         ]);
 
-        // ID уже назначенных сущностей
-        $assignedCourseIds    = $student->courses->pluck('course_id');
-        $assignedHomeworkIds  = $student->homeworks->pluck('homework_id');
-        $assignedExamIds      = $student->exams->pluck('exam_id');
-
-        // Все возможные для назначения сущности, исключая уже назначенные
-        $availableCourses   = $organization->courses()
-            ->whereNotIn('id', $assignedCourseIds)
+        // ✅ 1 SQL-запрос вместо 2-х (загрузка в PHP + whereNotIn)
+        // Используем whereDoesntHave для поиска курсов, НЕ назначенных этому студенту
+        $availableCourses = $organization->courses()
+            ->whereDoesntHave('students', fn($q) => $q->where('student_id', $student->id))
+            ->select(['id', 'title', 'organization_id'])
             ->get();
 
         $availableHomeworks = $organization->homeworks()
-            ->whereNotIn('id', $assignedHomeworkIds)
+            ->whereDoesntHave('students', fn($q) => $q->where('student_id', $student->id))
+            ->select(['id', 'title', 'organization_id'])
             ->get();
 
-        $availableExams     = $organization->exams()
-            ->whereNotIn('id', $assignedExamIds)
+        $availableExams = $organization->exams()
+            ->whereDoesntHave('students', fn($q) => $q->where('student_id', $student->id))
+            ->select(['id', 'title', 'organization_id'])
             ->get();
 
         return Inertia::render('Console/Student/Show', [
@@ -75,7 +75,6 @@ class StudentController extends Controller
             'availableExams'    => $availableExams,
         ]);
     }
-
     // Назначить курс студенту
     public function assignCourses(Request $request, Organization $organization, Student $student)
     {
@@ -93,18 +92,24 @@ class StudentController extends Controller
             return back()->with('error', 'Нет доступных курсов.');
         }
 
-        // Получаем ID уже назначенных курсов
-        $existingCourseIds = $student->courses()->pluck('course_id')->toArray();
-        $newCourseIds = $courseIds->diff($existingCourseIds);
+        // ✅ Пакетная вставка через upsert (1 запрос вместо N)
+        $now = now();
+        $grantedBy = auth()->user()->name ?? 'admin';
 
-        foreach ($newCourseIds as $courseId) {
-            $student->courses()->create([
-                'course_id'        => $courseId,
-                'organization_id'  => $organization->id,
-                'granted_by'       => auth()->user()->name ?? 'admin',
-                'granted_at'       => now(),
-            ]);
-        }
+        $data = $courseIds->map(fn($courseId) => [
+            'student_id'      => $student->id,
+            'course_id'       => $courseId,
+            'organization_id' => $organization->id,
+            'granted_by'      => $grantedBy,
+            'granted_at'      => $now,
+        ])->toArray();
+
+        // upsert: если запись уже существует (unique key student_id + course_id), обновит granted_by и granted_at
+        StudentCourse::upsert(
+            $data,
+            ['student_id', 'course_id'],
+            ['granted_by', 'granted_at']
+        );
 
         return back()->with('success', 'Курсы назначены.');
     }
@@ -125,17 +130,22 @@ class StudentController extends Controller
             return back()->with('error', 'Нет доступных ДЗ.');
         }
 
-        $existingHomeworkIds = $student->homeworks()->pluck('homework_id')->toArray();
-        $newHomeworkIds = $homeworkIds->diff($existingHomeworkIds);
+        $now = now();
+        $grantedBy = auth()->user()->name ?? 'admin';
 
-        foreach ($newHomeworkIds as $homeworkId) {
-            $student->homeworks()->create([
-                'homework_id'      => $homeworkId,
-                'organization_id'  => $organization->id,
-                'granted_by'       => auth()->user()->name ?? 'admin',
-                'granted_at'       => now(),
-            ]);
-        }
+        $data = $homeworkIds->map(fn($homeworkId) => [
+            'student_id'      => $student->id,
+            'homework_id'     => $homeworkId,
+            'organization_id' => $organization->id,
+            'granted_by'      => $grantedBy,
+            'granted_at'      => $now,
+        ])->toArray();
+
+        StudentHomework::upsert(
+            $data,
+            ['student_id', 'homework_id'],
+            ['granted_by', 'granted_at']
+        );
 
         return back()->with('success', 'Домашние задания назначены.');
     }
@@ -156,17 +166,22 @@ class StudentController extends Controller
             return back()->with('error', 'Нет доступных контрольных работ.');
         }
 
-        $existingExamIds = $student->exams()->pluck('exam_id')->toArray();
-        $newExamIds = $examIds->diff($existingExamIds);
+        $now = now();
+        $grantedBy = auth()->user()->name ?? 'admin';
 
-        foreach ($newExamIds as $examId) {
-            $student->exams()->create([
-                'exam_id'          => $examId,
-                'organization_id'  => $organization->id,
-                'granted_by'       => auth()->user()->name ?? 'admin',
-                'granted_at'       => now(),
-            ]);
-        }
+        $data = $examIds->map(fn($examId) => [
+            'student_id'      => $student->id,
+            'exam_id'         => $examId,
+            'organization_id' => $organization->id,
+            'granted_by'      => $grantedBy,
+            'granted_at'      => $now,
+        ])->toArray();
+
+        StudentExam::upsert(
+            $data,
+            ['student_id', 'exam_id'],
+            ['granted_by', 'granted_at']
+        );
 
         return back()->with('success', 'Контрольные работы назначены.');
     }
@@ -180,8 +195,10 @@ class StudentController extends Controller
             'ids.*' => 'integer|exists:student_courses,id',
         ]);
 
+        // ✅ Добавлена проверка organization_id для защиты от IDOR
         StudentCourse::whereIn('id', $validated['ids'])
             ->where('student_id', $student->id)
+            ->where('organization_id', $organization->id)
             ->delete();
 
         return back()->with('success', 'Выбранные курсы удалены.');
@@ -197,6 +214,7 @@ class StudentController extends Controller
 
         StudentHomework::whereIn('id', $validated['ids'])
             ->where('student_id', $student->id)
+            ->where('organization_id', $organization->id)
             ->delete();
 
         return back()->with('success', 'Выбранные ДЗ удалены.');
@@ -212,6 +230,7 @@ class StudentController extends Controller
 
         StudentExam::whereIn('id', $validated['ids'])
             ->where('student_id', $student->id)
+            ->where('organization_id', $organization->id)
             ->delete();
 
         return back()->with('success', 'Выбранные контрольные работы удалены.');

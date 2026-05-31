@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('organization_id');
-            $table->index('title');
+            $table->index(['module_id', 'order']);
             $table->index('module_id');
         });
     }

@@ -19,12 +19,14 @@ return new class extends Migration
             $table->string('granted_by')->default('admin');
             $table->timestamps();
 
+            // ✅ student_id ПЕРВЫМ — чаще ищем "все ДЗ студента", чем "все студенты с этим ДЗ"
+            $table->unique(['student_id', 'homework_id'], 'student_homework_unique');
 
+            // ✅ Составной индекс для быстрой фильтрации по организации + студенту
+            $table->index(['organization_id', 'student_id'], 'sh_org_student_idx');
 
-            $table->unique(['homework_id', 'student_id']);
-            $table->index('organization_id');
+            // ✅ Индекс для поиска всех студентов с конкретным ДЗ (используется в whereDoesntHave)
             $table->index('homework_id');
-            $table->index('student_id');
         });
     }
 

@@ -26,6 +26,8 @@ return new class extends Migration
 
             $table->index('organization_id');
             $table->index('lesson_id');
+            $table->index(['lesson_id', 'order']);
+            $table->index(['organization_id', 'is_active']);
         });
     }
 

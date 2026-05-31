@@ -30,18 +30,24 @@ class LessonMaterialController extends Controller
     {
         $this->authorize('consoleAction', $organization);
 
+        // ✅ Пагинация вместо get() для предотвращения утечки памяти
         $lessonMaterials = $organization
-            ->LessonMaterials()
-            ->get();
+            ->lessonMaterials() // ✅ Исправлен регистр (в модели HasMany)
+            ->with('files') // Предотвращает N+1 при отображении превью
+            ->orderBy('order')
+            ->paginate(20);
 
+        // ✅ select() для экономии памяти при передаче на фронтенд
         $lessons = $organization
             ->lessons()
+            ->select(['id', 'title', 'organization_id', 'module_id'])
+            ->orderBy('title')
             ->get();
 
         return Inertia::render('Console/LessonMaterial/List', [
             'organization' => new OrganizationResource($organization),
-            'lessons'       => LessonResource::collection($lessons),
-            'materials'      => LessonMaterialResource::collection($lessonMaterials),
+            'lessons'      => LessonResource::collection($lessons),
+            'materials'    => LessonMaterialResource::collection($lessonMaterials),
         ]);
     }
 
@@ -59,25 +65,14 @@ class LessonMaterialController extends Controller
             $validated['video_url'] = null;
         }
 
+        // ✅ Проверка принадлежности урока организации (Защита от IDOR)
+        Lesson::where('id', $validated['lesson_id'])
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+
         $material = LessonMaterial::create($validated);
 
-        // Сохраняем файл в полиморфной таблице
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $mime = $file->getMimeType();
-            $folder = str_starts_with($mime, 'image/') ? 'lesson_materials/images' : 'lesson_materials/videos';
-
-            $path = $file->store($folder, 'public');
-
-            $material->files()->create([
-                'name'      => $file->getClientOriginalName(),
-                'path'      => $path,
-                'disk'      => 'public',
-                'size'      => $file->getSize(),
-                'mime_type' => $mime,
-                'extension' => $file->getClientOriginalExtension(),
-            ]);
-        }
+        $this->handleFileUpload($material, $request);
 
         return back()->with('success', 'Материал успешно создан');
     }
@@ -90,15 +85,17 @@ class LessonMaterialController extends Controller
         $this->authorize('consoleAction', $organization);
         abort_unless($material->organization_id === $organization->id, 404);
 
-        $lessons = $organization->lessons()->get();
-
-        // Загружаем файлы для материала
         $material->load('files');
+
+        $lessons = $organization->lessons()
+            ->select(['id', 'title', 'organization_id', 'module_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/LessonMaterial/Show', [
             'organization' => new OrganizationResource($organization),
-            'material' => new LessonMaterialResource($material),
-            'lessons' => LessonResource::collection($lessons),
+            'material'     => new LessonMaterialResource($material),
+            'lessons'      => LessonResource::collection($lessons),
         ]);
     }
 
@@ -112,36 +109,21 @@ class LessonMaterialController extends Controller
 
         $validated = $request->validated();
 
-        // Логика эксклюзивности: файл имеет приоритет
+        // ✅ Проверка принадлежности урока организации (Защита от IDOR)
+        if (isset($validated['lesson_id'])) {
+            Lesson::where('id', $validated['lesson_id'])
+                ->where('organization_id', $organization->id)
+                ->firstOrFail();
+        }
+
+        // Логика эксклюзивности: файл имеет приоритет над video_url
+        if ($request->hasFile('image') || $request->filled('video_url')) {
+            $this->deleteOldFiles($material);
+        }
+
         if ($request->hasFile('image')) {
-            $validated['video_url'] = null;   // очищаем ссылку
-
-            // Удаляем все старые файлы
-            foreach ($material->files as $file) {
-                Storage::disk($file->disk)->delete($file->path);
-                $file->delete();
-            }
-
-            // Сохраняем новый файл
-            $uploadedFile = $request->file('image');
-            $mime = $uploadedFile->getMimeType();
-            $folder = str_starts_with($mime, 'image/') ? 'lesson_materials/images' : 'lesson_materials/videos';
-            $path = $uploadedFile->store($folder, 'public');
-
-            $material->files()->create([
-                'name'      => $uploadedFile->getClientOriginalName(),
-                'path'      => $path,
-                'disk'      => 'public',
-                'size'      => $uploadedFile->getSize(),
-                'mime_type' => $mime,
-                'extension' => $uploadedFile->getClientOriginalExtension(),
-            ]);
-        } elseif ($request->filled('video_url')) {
-            // Удаляем старые файлы, оставляем только ссылку
-            foreach ($material->files as $file) {
-                Storage::disk($file->disk)->delete($file->path);
-                $file->delete();
-            }
+            $validated['video_url'] = null;
+            $this->handleFileUpload($material, $request);
         }
 
         $material->update($validated);
@@ -157,39 +139,62 @@ class LessonMaterialController extends Controller
         $this->authorize('consoleAction', $organization);
         abort_unless($material->organization_id === $organization->id, 404);
 
-        // Удаляем изображение если оно есть через полиморфную связь
-        $image = $material->image;
-        if ($image) {
-            try {
-                Storage::disk($image->disk)->delete($image->path);
-            } catch (\Exception $e) {
-                // Игнорируем ошибки удаления
-            }
-            $image->delete();
-        }
+        // ✅ Исправлен баг: используем связь files() вместо несуществующей image
+        $this->deleteOldFiles($material);
 
         $material->delete();
 
         return Redirect::route('material.index', [
-            'organization' => new OrganizationResource($organization),
+            'organization' => $organization,
         ])->with('success', 'Материал успешно удален');
     }
 
-    public function reorder(ModuleReorderRequest $request, Organization $organization, Lesson $lesson)
+    public function reorder(LessonMaterialReorderRequest $request, Organization $organization, Lesson $lesson)
     {
         $this->authorize('consoleAction', $organization);
         abort_unless($lesson->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
 
-        DB::transaction(function () use ($validated, $lesson) {
-            foreach ($validated['items'] as $item) {
-                LessonMaterial::where('id', $item['id'])
-                    ->where('lesson_id', $lesson->id)
-                    ->update(['order' => $item['order']]);
-            }
-        });
+        // ✅ Один SQL-запрос вместо N запросов в цикле
+        $updates = collect($validated['items'])->map(fn($item) => [
+            'id'    => $item['id'],
+            'order' => $item['order'],
+        ])->toArray();
+
+        LessonMaterial::upsert($updates, ['id'], ['order']);
 
         return back()->with('success', 'Порядок материалов обновлен');
+    }
+
+    private function handleFileUpload(LessonMaterial $material, $request): void
+    {
+        $file = $request->file('image');
+        $mime = $file->getMimeType();
+        $folder = str_starts_with($mime, 'image/') ? 'lesson_materials/images' : 'lesson_materials/videos';
+
+        $path = $file->store($folder, 'public');
+
+        $material->files()->create([
+            'name'      => $file->getClientOriginalName(),
+            'path'      => $path,
+            'disk'      => 'public',
+            'size'      => $file->getSize(),
+            'mime_type' => $mime,
+            'extension' => $file->getClientOriginalExtension(),
+        ]);
+    }
+
+    private function deleteOldFiles(LessonMaterial $material): void
+    {
+        foreach ($material->files as $file) {
+            try {
+                Storage::disk($file->disk)->delete($file->path);
+            } catch (\Exception $e) {
+                // Логируем, но не прерываем выполнение
+                logger()->error('Failed to delete file: ' . $file->path, ['error' => $e->getMessage()]);
+            }
+            $file->delete();
+        }
     }
 }

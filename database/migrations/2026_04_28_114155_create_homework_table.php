@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->integer('max_score')->default(0);
-            $table->foreignId('lesson_id')
+            $table->foreignId('lesson_id')->unique()
                 ->constrained('lessons')
                 ->cascadeOnDelete();
             $table->foreignId('organization_id')
@@ -25,7 +25,7 @@ return new class extends Migration
 
             // Индексы
             $table->index('organization_id');
-            $table->index('lesson_id');
+            $table->index(['organization_id', 'is_active']);
         });
     }
 

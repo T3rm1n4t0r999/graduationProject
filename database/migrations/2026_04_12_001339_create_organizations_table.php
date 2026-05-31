@@ -25,6 +25,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('email_verification_token');
+            $table->index('status');
         });
     }
 

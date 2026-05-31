@@ -77,21 +77,16 @@ class LessonTask extends Model
                         ->max('order') + 1;
             }
         });
-
-        static::deleted(function (LessonTask $lessonTask) {
-            LessonTask::where('lesson_id', $lessonTask->lesson_id)
-                ->where('order', '>', $lessonTask->order)
-                ->decrement('order');
-        });
     }
 
-    public function recalculateMaxScore(){
+    public function recalculateMaxScore(): int
+    {
         $totalPoints = $this->questions()
             ->where('is_active', true)
             ->sum('points');
 
-        // Обновляем поле max_score в самой модели
-        $this->update(['max_score' => $totalPoints]);
+        static::where('id', $this->id)->update(['max_score' => $totalPoints]);
+        $this->max_score = $totalPoints;
 
         return $totalPoints;
     }

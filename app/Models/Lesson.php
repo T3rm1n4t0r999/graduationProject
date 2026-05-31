@@ -42,7 +42,7 @@ class Lesson extends Model
 
     public function course(): BelongsTo
     {
-        return $this->belongsToThrough(Course::class, Module::class);
+        return $this->belongsTo(Course::class, Module::class);
     }
 
     public function homework(): HasOne{
@@ -61,11 +61,5 @@ class Lesson extends Model
             }
         });
 
-        static::deleted(function (Lesson $lesson) {
-            Lesson::where('organization_id', $lesson->organization_id)
-                ->where('module_id', $lesson->module_id)
-                ->where('order', '>', $lesson->order)
-                ->decrement('order');
-        });
     }
 }

@@ -47,6 +47,10 @@ return new class extends Migration
             $table->index(['student_id', 'attempt']);
             $table->index('organization_id');
             $table->index(['points']); // Для поиска лучших результатов
+            $table->index(['organization_id', 'checked', 'created_at'], 'sp_org_checked_created_idx');
+
+            // 2. Ускоряет correlated subquery (whereNotExists), чтобы БД делала Index Lookup вместо Table Scan
+            $table->index(['student_id', 'progressable_type', 'progressable_id', 'checked'], 'sp_student_task_checked_idx');
         });
     }
 

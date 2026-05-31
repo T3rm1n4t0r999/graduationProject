@@ -12,7 +12,9 @@ use App\Models\Question;
 use App\Policies\BotPolicy;
 use App\Policies\OrganizationPolicy;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -24,7 +26,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
     }
 
     /**
@@ -32,6 +33,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        DB::listen(function ($query) {
+            if ($query->time > config('logging.slow_query.threshold', 100)) {
+                Log::channel('slow_queries')->warning('Slow query detected', [
+                    'time_ms'   => $query->time,
+                    'sql'       => $query->sql,
+                    'bindings'  => $query->bindings,
+                    'url'       => request()->fullUrl(),
+                    'user_id'   => auth()->id(),
+                    'route'     => optional(request()->route())->getName(),
+                    'connection'=> $query->connectionName,
+                ]);
+            }
+        });
+
         Relation::morphMap([
             'lesson_task'     => LessonTask::class,
             'homework'       => Homework::class,
