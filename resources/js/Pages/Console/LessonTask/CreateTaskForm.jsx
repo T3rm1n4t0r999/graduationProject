@@ -178,10 +178,19 @@ export default function CreateTaskForm({ isOpen, onClose, onSuccess, organizatio
                                         </label>
                                         <input
                                             type="number"
-                                            value={data.max_attempts}
-                                            onChange={(e) => setData('max_attempts', e.target.value)}
-                                            className="form-input-glass min-h-[80px]"
-                                            placeholder="Оставьте пустым для неограниченного количества"
+                                            min="0"
+                                            value={data.max_attempts ?? ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') {
+                                                    setData('max_attempts', '');
+                                                } else {
+                                                    const num = parseInt(val, 10);
+                                                    setData('max_attempts', isNaN(num) ? '' : Math.max(0, num));
+                                                }
+                                            }}
+                                            className="form-input-glass"
+                                            placeholder="Неограниченно"
                                         />
                                         {errors.max_attempts && <p className="mt-1 text-sm text-red-500">{errors.max_attempts}</p>}
                                     </div>

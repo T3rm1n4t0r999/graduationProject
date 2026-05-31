@@ -127,7 +127,7 @@ class ExamController extends Controller
 
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
-
+        $validated['max_attempts'] = $validated['max_attempts'] ? $validated['max_attempts'] : 0;
         $module = Module::findOrFail($validated['module_id']);
         if ($module->organization_id !== $organization->id) {
             abort(403, 'Модуль не принадлежит данной организации.');

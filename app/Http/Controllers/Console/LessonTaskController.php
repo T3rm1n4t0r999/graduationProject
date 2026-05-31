@@ -112,6 +112,7 @@ class LessonTaskController extends Controller
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
         $validated['max_score'] = 0;
+        $validated['max_attempts'] = $validated['max_attempts'] ? $validated['max_attempts'] : 0;
         LessonTask::create($validated);
 
         return back()->with('success', 'Задание успешно создано');
@@ -124,7 +125,6 @@ class LessonTaskController extends Controller
         abort_unless($task->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
-
         $task->update($validated);
 
         return back()->with('success', 'Задание успешно обновлено');

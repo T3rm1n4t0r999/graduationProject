@@ -130,7 +130,7 @@ class HomeworkController extends Controller
 
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
-
+        $validated['max_attempts'] = $validated['max_attempts'] ? $validated['max_attempts'] : 0;
         $lesson = Lesson::findOrFail($validated['lesson_id']);
         if ($lesson->organization_id !== $organization->id) {
             abort(403, 'Урок не принадлежит данной организации.');
@@ -147,7 +147,6 @@ class HomeworkController extends Controller
         abort_unless($homework->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
-
         $lesson = Lesson::findOrFail($validated['lesson_id']);
         if ($lesson->organization_id !== $organization->id) {
             abort(403, 'Урок не принадлежит данной организации.');
