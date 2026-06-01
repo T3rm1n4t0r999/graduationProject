@@ -11,7 +11,7 @@ export default function CreateGroupInvitationForm({ isOpen, onClose, onSuccess, 
 
     const submit = (e) => {
         e.preventDefault();
-        post(route('group.invitation.store', { organization: organization.id, group: group.id }), {
+        post(route('group.invitation.store', { organization: organization.id, group: group.data.id }), {
             preserveState: true,
             preserveScroll: true,
             onSuccess: () => {

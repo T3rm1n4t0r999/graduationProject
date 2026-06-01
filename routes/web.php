@@ -49,18 +49,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('organization/{organization}/console/course', CourseController::class);
     Route::patch('/organization/{organization}/courses-reorder', [CourseController::class, 'reorder'])
         ->name('course.reorder');
+    Route::get('/organizations/{organization}/courses/all', [CourseController::class, 'allForReorder'])
+        ->name('course.all');
 
     Route::resource('organization/{organization}/console/module', ModuleController::class);
     Route::patch('organizations/{organization}/courses/{course}/modules-reorder', [ModuleController::class, 'reorder'])
         ->name('module.reorder');
+    Route::get('/organizations/{organization}/courses/{course}/modules/all',
+        [ModuleController::class, 'allForReorder'])
+        ->name('module.all');
+
 
     Route::resource('organization/{organization}/console/lesson', LessonController::class);
     Route::patch('organizations/{organization}/modules/{module}/lessons-reorder', [LessonController::class, 'reorder'])
         ->name('lesson.reorder');
+    Route::get('/organizations/{organization}/lessons/all', [LessonController::class, 'allForReorder'])
+        ->name('lesson.all');
 
     Route::resource('organization/{organization}/console/task', LessonTaskController::class);
     Route::patch('organizations/{organization}/lesson/{lesson}/task-reorder', [LessonTaskController::class, 'reorder'])
         ->name('task.reorder');
+    Route::get('/organizations/{organization}/lessonTasks/all', [LessonTaskController::class, 'allForReorder'])
+        ->name('lessonTask.all');
 
     Route::resource('organization/{organization}/console/homework', HomeworkController::class);
 
@@ -71,19 +81,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('organization/{organization}/console/material', LessonMaterialController::class);
     Route::patch('organizations/{organization}/lesson/{lesson}/material-reorder', [LessonMaterialController::class, 'reorder'])
         ->name('material.reorder');
+    Route::get('/organizations/{organization}/materials/all', [LessonMaterialController::class, 'allForReorder'])
+        ->name('materials.all');
 
     // Задания уроков
     Route::get('organization/{organization}/console/question/task', [QuestionController::class, 'taskIndex'])->name('question.task.index');
     Route::patch('organizations/{organization}/task/{task}/questions-reorder', [QuestionController::class, 'reorder'])
         ->name('question.task.reorder');
+    Route::get('/organizations/{organization}/task/{task}/questions/all', [QuestionController::class, 'allForReorderTask'])
+        ->name('questions.task.all');
+
     // Контрольные работы
     Route::get('organization/{organization}/console/question/exam', [QuestionController::class, 'examIndex'])->name('question.exam.index');
     Route::patch('organizations/{organization}/exam/{exam}/questions-reorder', [QuestionController::class, 'reorder'])
         ->name('question.exam.reorder');
+    Route::get('/organizations/{organization}/exam/{exam}/questions/all', [QuestionController::class, 'allForReorderExam'])
+        ->name('questions.exam.all');
+
     // Домашние задания
     Route::get('organization/{organization}/console/question/homework', [QuestionController::class, 'homeworkIndex'])->name('question.homework.index');
     Route::patch('organizations/{organization}/homework/{homework}/questions-reorder', [QuestionController::class, 'reorder'])
         ->name('question.homework.reorder');
+    Route::get('/organizations/{organization}/homework/{homework}/questions/all', [QuestionController::class, 'allForReorderHomework'])
+        ->name('questions.homework.all');
 
     Route::resource('organization/{organization}/console/question', QuestionController::class);
 

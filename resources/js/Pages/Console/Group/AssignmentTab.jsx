@@ -91,7 +91,7 @@ export default function AssignmentTab({
                     <p className="text-meta text-center py-6">Ничего не назначено</p>
                 ) : (
                     <div className="space-y-2">
-                        {assignedItems.data.map(assigned => (
+                        {assignedItems.map(assigned => (
                             <div
                                 key={assigned.id}
                                 className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 hover:shadow-sm transition-shadow"

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, usePage, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateTaskForm from "@/Pages/Console/LessonTask/CreateTaskForm.jsx";
+import Pagination from "@/Pages/Console/Pagination.jsx"; // ✅ Импорт пагинации
 
 function TaskCard({ task, organizationId }) {
     return (
@@ -29,8 +30,10 @@ function TaskCard({ task, organizationId }) {
                     {task.description || 'Описание отсутствует'}
                 </p>
             </div>
-            <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between text-xs">
+            <div className="mt-auto pt-4 border-t flex items-center justify-between text-xs"
+                 style={{ borderColor: 'var(--color-border)' }}>
                 <span className="text-label">Вопросы: {task.questions_count ?? 0}</span>
+                <span className="text-label">Баллы: {task.max_score ?? 0}</span>
                 <span className="font-medium" style={{ color: 'var(--color-primary)' }}>
                     Подробнее →
                 </span>
@@ -127,7 +130,7 @@ export default function List({ auth, organization, tasks, lessons }) {
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-main">Задания</h1>
                                 <p className="text-meta mt-1">
-                                    Всего: <span className="font-semibold text-main">{tasks.total ?? tasks.data.length}</span>
+                                    Всего: <span className="font-semibold text-main">{tasks.total ?? 0}</span>
                                 </p>
                             </div>
                         </div>
@@ -171,7 +174,8 @@ export default function List({ auth, organization, tasks, lessons }) {
                                     className="form-input-glass"
                                 >
                                     <option value="">Все уроки</option>
-                                    {lessons?.data?.map(lesson => (
+                                    {/* ✅ Исправлено: lessons — массив, не пагинатор */}
+                                    {lessons?.map(lesson => (
                                         <option key={lesson.id} value={lesson.id}>{lesson.title}</option>
                                     ))}
                                 </select>
@@ -273,16 +277,29 @@ export default function List({ auth, organization, tasks, lessons }) {
                     </form>
                 )}
 
-                {/* Список заданий */}
+                {/* Список заданий с пагинацией */}
                 {tasks.data.length === 0 ? (
                     <div className="glass-card p-12 text-center text-meta">
                         Пока нет ни одного задания.
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {tasks.data.map((task) => (
-                            <TaskCard key={task.id} task={task} organizationId={organization.id} />
-                        ))}
+                    <div className="glass-card p-6 md:p-8">
+                        {/* ✅ Grid ОТДЕЛЬНО */}
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {tasks.data.map((task) => (
+                                <TaskCard
+                                    key={task.id}
+                                    task={task}
+                                    organizationId={organization.id}
+                                />
+                            ))}
+                        </div>
+
+                        {/* ✅ Пагинация ПОСЛЕ grid */}
+                        <Pagination
+                            meta={tasks.meta}
+                            links={tasks.links}
+                        />
                     </div>
                 )}
             </div>
@@ -291,7 +308,7 @@ export default function List({ auth, organization, tasks, lessons }) {
                 isOpen={isCreateTaskModalOpen}
                 onClose={() => setIsCreateTaskModalOpen(false)}
                 organization={organization}
-                lessons={lessons.data}
+                lessons={lessons}
                 onSuccess={handleTaskCreated}
             />
 

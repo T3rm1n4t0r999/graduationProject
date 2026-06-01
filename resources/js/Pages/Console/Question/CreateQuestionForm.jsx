@@ -24,7 +24,7 @@ export default function CreateQuestionForm({ isOpen, onClose, onSuccess, organiz
         explanation: '',
         is_active: true,
         questionable_type: initialType,
-        questionable_id: parentId,
+        questionable_id: parentId ? String(parentId) : '',
         options: [{ text: '', is_correct: false }],
         correct_answers: [],
         image: null,          // <-- добавить

@@ -48,7 +48,7 @@ export default function InvitationsListModal({ isOpen, onClose, invitations = []
             preserveScroll: true,
         });
     };
-    console.log(invitations)
+
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={onClose}>

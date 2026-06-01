@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, usePage, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateExamForm from './CreateExamForm';
-import Pagination from '@/Components/Pagination';
+import Pagination from "@/Pages/Console/Pagination.jsx";
 
 function ExamCard({ exam, organizationId }) {
     return (

@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import { Link } from '@inertiajs/react';
 import CreateQuestionForm from "@/Pages/Console/Question/CreateQuestionForm.jsx";
-import Pagination from '@/Components/Pagination';
+import Pagination from "@/Pages/Console/Pagination.jsx";
 
 function QuestionCard({ question, organizationId }) {
     const getTypeLabel = (type) => {
@@ -73,7 +73,7 @@ function QuestionCard({ question, organizationId }) {
                     </span>
                     <span className="text-label">Порядок: {question.order}</span>
                 </div>
-                <div className="pt-3 border-t border-gray-100 dark:border-gray-700/50 text-xs">
+                <div className="pt-3 border-t text-xs" style={{ borderColor: 'var(--color-border)' }}>
                     <span className="text-label">
                         Привязан к:{' '}
                         {question.questionable && getParentLink(question.questionable) ? (
@@ -121,9 +121,9 @@ export default function List({ auth, organization, questions, context, tasks = [
 
     const parentList = (() => {
         switch (context) {
-            case 'task': return tasks?.data || tasks || [];
-            case 'homework': return homeworks?.data || homeworks || [];
-            case 'exam': return exams?.data || exams || [];
+            case 'task': return tasks  || [];
+            case 'homework': return  homeworks || [];
+            case 'exam': return exams || [];
             default: return [];
         }
     })();
@@ -217,7 +217,7 @@ export default function List({ auth, organization, questions, context, tasks = [
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-main">Вопросы</h1>
                                 <p className="text-meta mt-1">
-                                    Всего: <span className="font-semibold text-main">{questions.total ?? questions.data.length}</span>
+                                    Всего: <span className="font-semibold text-main">{questions.total ?? 0}</span>
                                 </p>
                             </div>
                         </div>
@@ -378,13 +378,14 @@ export default function List({ auth, organization, questions, context, tasks = [
                     </form>
                 )}
 
-                {/* Список вопросов */}
+                {/* Список вопросов с пагинацией */}
                 {questions.data.length === 0 ? (
                     <div className="glass-card p-12 text-center text-meta">
                         Пока нет ни одного вопроса.
                     </div>
                 ) : (
-                    <>
+                    <div className="glass-card p-6 md:p-8">
+                        {/* ✅ Grid ОТДЕЛЬНО */}
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {questions.data.map((question) => (
                                 <QuestionCard
@@ -394,8 +395,13 @@ export default function List({ auth, organization, questions, context, tasks = [
                                 />
                             ))}
                         </div>
-                        {questions.links && <Pagination links={questions.links} />}
-                    </>
+
+                        {/* ✅ Пагинация ПОСЛЕ grid с meta и links */}
+                        <Pagination
+                            meta={questions.meta}
+                            links={questions.links}
+                        />
+                    </div>
                 )}
             </div>
 

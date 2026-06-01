@@ -177,7 +177,7 @@ export default function Show({ auth, organization, lesson, modules }) {
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
                 lesson={lesson}
-                modules={modules.data}
+                modules={modules}
                 organization={organization}
                 onSuccess={handleLessonEdited}
             />

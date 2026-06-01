@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { router, usePage } from '@inertiajs/react';
+import { router, usePage, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
-import { Link } from '@inertiajs/react';
 import CreateLessonForm from '@/Pages/Console/Lesson/CreateLessonForm';
+import Pagination from "@/Pages/Console/Pagination.jsx";
+
 
 function LessonCard({ lesson, organizationId }) {
     return (
@@ -30,7 +31,8 @@ function LessonCard({ lesson, organizationId }) {
                     {lesson.description || 'Описание отсутствует'}
                 </p>
             </div>
-            <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between text-xs">
+            <div className="mt-auto pt-4 border-t flex items-center justify-between text-xs"
+                 style={{ borderColor: 'var(--color-border)' }}>
                 <span className="text-label">Задания: {lesson.tasks_count ?? 0}</span>
                 <span className="text-label">Материалы: {lesson.materials_count ?? 0}</span>
                 <span className="font-medium" style={{ color: 'var(--color-primary)' }}>
@@ -133,7 +135,7 @@ export default function List({ auth, organization, lessons, modules }) {
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-main">Уроки</h1>
                                 <p className="text-meta mt-1">
-                                    Всего: <span className="font-semibold text-main">{lessons.total ?? lessons.data.length}</span>
+                                    Всего: <span className="font-semibold text-main">{lessons.total ?? 0}</span>
                                 </p>
                             </div>
                         </div>
@@ -177,7 +179,8 @@ export default function List({ auth, organization, lessons, modules }) {
                                     className="form-input-glass"
                                 >
                                     <option value="">Все модули</option>
-                                    {modules?.data?.map(mod => (
+                                    {/* ✅ Исправлено: modules — массив, не пагинатор */}
+                                    {modules?.map(mod => (
                                         <option key={mod.id} value={mod.id}>{mod.title}</option>
                                     ))}
                                 </select>
@@ -304,16 +307,29 @@ export default function List({ auth, organization, lessons, modules }) {
                     </form>
                 )}
 
-                {/* Список уроков */}
+                {/* Список уроков с пагинацией */}
                 {lessons.data.length === 0 ? (
                     <div className="glass-card p-12 text-center text-meta">
                         Пока нет ни одного урока.
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {lessons.data.map((lesson) => (
-                            <LessonCard key={lesson.id} lesson={lesson} organizationId={organization.id} />
-                        ))}
+                    <div className="glass-card p-6 md:p-8">
+                        {/* ✅ Grid ОТДЕЛЬНО */}
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {lessons.data.map((lesson) => (
+                                <LessonCard
+                                    key={lesson.id}
+                                    lesson={lesson}
+                                    organizationId={organization.id}
+                                />
+                            ))}
+                        </div>
+
+                        {/* ✅ Пагинация ПОСЛЕ grid и с правильными данными */}
+                        <Pagination
+                            meta={lessons.meta}
+                            links={lessons.links}
+                        />
                     </div>
                 )}
             </div>
@@ -322,7 +338,7 @@ export default function List({ auth, organization, lessons, modules }) {
                 isOpen={isCreateLessonModalOpen}
                 onClose={() => setIsCreateLessonModalOpen(false)}
                 organization={organization}
-                modules={modules.data}
+                modules={modules}
                 onSuccess={handleLessonCreated}
             />
 

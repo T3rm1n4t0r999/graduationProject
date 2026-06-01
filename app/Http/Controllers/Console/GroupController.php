@@ -23,6 +23,7 @@ use App\Models\StudentHomework;
 use App\Models\StudentExam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class GroupController extends Controller
@@ -101,7 +102,7 @@ class GroupController extends Controller
 
         return Inertia::render('Console/Group/Show', [
             'organization'       => new OrganizationResource($organization),
-            'group'              => new GroupResource($group), // Убран лишний ->resolve()
+            'group'              => new GroupResource($group),
             'availableStudents'  => StudentResource::collection($availableStudents),
             'availableCourses'   => CourseResource::collection($availableCourses),
             'availableHomeworks' => HomeworkResource::collection($availableHomeworks),

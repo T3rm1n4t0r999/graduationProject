@@ -37,9 +37,9 @@ class CourseController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // Убираем LOWER() и whereRaw, используем нативный LIKE
-                    $sub->where('title', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                    // Убираем LOWER() и whereRaw, используем нативный ILIKE
+                    $sub->where('title', 'ILIKE', "%{$search}%")
+                        ->orWhere('description', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(isset($filters['is_active']), function ($q) use ($filters) {
@@ -135,9 +135,12 @@ class CourseController extends Controller
 
         $course->load([
             'modules' => function ($query) {
-                $query->orderBy('order');
+                $query->select(['id', 'title', 'description', 'is_active', 'order', 'course_id', 'organization_id'])
+                    ->withCount('lessons')
+                    ->orderBy('order');
             }
         ]);
+
         return Inertia::render('Console/Course/Show', [
             'organization' => new OrganizationResource($organization),
             'course' => new CourseResource($course),
@@ -149,16 +152,17 @@ class CourseController extends Controller
         $this->authorize('consoleAction', $organization);
         $validated = $request->validated();
 
-        $updates = collect($validated['items'])->map(fn($item) => [
-            'id'    => $item['id'],
-            'order' => $item['order'],
-        ])->toArray();
 
-        // ✅ Один SQL-запрос (INSERT ... ON DUPLICATE KEY UPDATE)
-        Course::upsert($updates, ['id'], ['order']);
+        DB::transaction(function () use ($validated, $organization) {
+            foreach ($validated['items'] as $item) {
+                Course::where('id', $item['id'])
+                    ->where('organization_id', $organization->id) // Защита от IDOR
+                    ->update(['order' => $item['order']]);
+            }
+        });
 
         return redirect()
-            ->route('course.index', $organization) // Передаем модель, а не Resource
+            ->route('course.index', $organization)
             ->with('success', 'Порядок курсов обновлён');
     }
 
@@ -192,5 +196,27 @@ class CourseController extends Controller
         return redirect()
             ->route('course.index', new OrganizationResource($organization))
             ->with('success', 'Курс удалён');
+    }
+
+    public function allForReorder(Organization $organization, Request $request)
+    {
+        $this->authorize('consoleAction', $organization);
+
+        $limit = $request->get('limit', 100);
+        $offset = $request->get('offset', 0);
+
+        $courses = $organization->courses()
+            ->select(['id', 'title', 'description', 'is_active', 'order', 'organization_id'])
+            ->withCount('modules')
+            ->orderBy('order')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        return response()->json([
+            'data' => CourseResource::collection($courses),
+            'has_more' => $courses->count() === $limit,
+            'total' => $organization->courses()->count(),
+        ]);
     }
 }

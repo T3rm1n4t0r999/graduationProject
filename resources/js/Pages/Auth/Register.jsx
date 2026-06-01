@@ -33,7 +33,7 @@ export default function Register() {
 
             <form onSubmit={submit}>
                 <div>
-                    <label className="block text-sm font-medium text-main">Имя</label>
+                    <label className="block text-sm font-medium text-main">Имя*</label>
                     <input
                         type="text"
                         autoFocus
@@ -47,7 +47,7 @@ export default function Register() {
 
                 {!invitation && (
                     <div className="mt-4">
-                        <label className="block text-sm font-medium text-main">Email</label>
+                        <label className="block text-sm font-medium text-main">Email*</label>
                         <input
                             type="email"
                             value={data.email}

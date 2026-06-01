@@ -38,9 +38,9 @@ class ExamController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // ✅ Нативный LIKE вместо LOWER() + whereRaw (игнорирует индексы)
-                    $sub->where('title', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                    // ✅ Нативный ILIKE вместо LOWER() + whereRaw (игнорирует индексы)
+                    $sub->where('title', 'ILIKE', "%{$search}%")
+                        ->orWhere('description', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(!empty($filters['module_id']), fn($q) => $q->where('module_id', $filters['module_id']))
@@ -75,8 +75,8 @@ class ExamController extends Controller
         return Inertia::render('Console/Exam/List', [
             'organization'  => new OrganizationResource($organization),
             'exams'         => ExamResource::collection($exams),
-            'modules'       => ModuleResource::collection($allModules),
-            'freeModules'   => ModuleResource::collection($freeModules),
+            'modules'       => $allModules,
+            'freeModules'   => $freeModules,
             'filters'       => $filters,
         ]);
     }
@@ -104,7 +104,7 @@ class ExamController extends Controller
         return Inertia::render('Console/Exam/Show', [
             'organization' => new OrganizationResource($organization),
             'exam'         => new ExamResource($exam),
-            'modules'      => ModuleResource::collection($availableModules),
+            'modules'      => $availableModules,
         ]);
     }
 

@@ -27,7 +27,6 @@ function StudentsTab({ group, availableStudents, organization }) {
             { preserveScroll: true }
         );
     };
-
     const getInitials = (student) => `${student.lastname?.[0] || ''}${student.firstname?.[0] || ''}`.toUpperCase();
 
     return (
@@ -35,10 +34,10 @@ function StudentsTab({ group, availableStudents, organization }) {
             {/* Текущие студенты */}
             <div>
                 <h3 className="text-base font-semibold text-main mb-4">
-                    Текущие студенты ({group.students.data.length})
+                    Текущие студенты ({group.data.students.length})
                 </h3>
                 <div className="space-y-2">
-                    {group.students.data.map(student => (
+                    {group.data.students.map(student => (
                         <div
                             key={student.id}
                             className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 hover:shadow-sm transition-shadow"
@@ -66,7 +65,7 @@ function StudentsTab({ group, availableStudents, organization }) {
                             </button>
                         </div>
                     ))}
-                    {group.students.data.length === 0 && (
+                    {group.data.students.length === 0 && (
                         <p className="text-meta text-sm py-4 text-center">Нет студентов</p>
                     )}
                 </div>
@@ -131,8 +130,8 @@ export default function Show({ auth, organization, group, availableStudents, ava
             label: 'Курсы',
             content: (
                 <AssignmentTab
-                    group={group}
-                    assignedItems={group.courses}
+                    group={group.data}
+                    assignedItems={group.data.courses}
                     availableItems={availableCourses}
                     itemKey="course_id"
                     itemNameKey="course.title"
@@ -147,8 +146,8 @@ export default function Show({ auth, organization, group, availableStudents, ava
             label: 'Домашние задания',
             content: (
                 <AssignmentTab
-                    group={group}
-                    assignedItems={group.homeworks}
+                    group={group.data}
+                    assignedItems={group.data.homeworks}
                     availableItems={availableHomeworks}
                     itemKey="homework_id"
                     itemNameKey="homework.title"
@@ -164,8 +163,8 @@ export default function Show({ auth, organization, group, availableStudents, ava
             label: 'Контрольные',
             content: (
                 <AssignmentTab
-                    group={group}
-                    assignedItems={group.exams}
+                    group={group.data}
+                    assignedItems={group.data.exams}
                     availableItems={availableExams}
                     itemKey="exam_id"
                     itemNameKey="exam.title"

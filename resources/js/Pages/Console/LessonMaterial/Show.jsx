@@ -197,7 +197,7 @@ export default function Show({ auth, organization, material, lessons }) {
                                     })}
                                     className="badge hover:underline"
                                 >
-                                    {lessons.data.find(l => l.id === material.lesson_id)?.title || `Урок #${material.lesson_id}`}
+                                    {lessons.find(l => l.id === material.lesson_id)?.title || `Урок #${material.lesson_id}`}
                                 </Link>
                             </div>
                         )}

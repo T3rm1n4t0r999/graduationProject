@@ -47,7 +47,9 @@ export default function Show({ auth, organization, module, courses }) {
         router.reload({ only: ['module'], preserveScroll: true });
     };
 
-    const parentCourse = courses?.data?.find(c => c.id === module.course_id);
+    // ✅ Исправлено: courses — это массив, не пагинатор
+    const parentCourse = courses?.find(c => c.id === module.course_id);
+    const moduleLessons = module?.lessons || [];
 
     return (
         <ConsoleLayout auth={auth} organization={organization}>
@@ -95,14 +97,15 @@ export default function Show({ auth, organization, module, courses }) {
                     </div>
 
                     {/* Мета-информация */}
-                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t"
+                         style={{ borderColor: 'var(--color-border)' }}>
                         <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
                             <span>Порядок:</span>
                             <span className="font-semibold text-main">{module.order}</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
                             <span>Уроков:</span>
-                            <span className="font-semibold text-main">{module.lessons?.length ?? 0}</span>
+                            <span className="font-semibold text-main">{moduleLessons.length}</span>
                         </div>
                         {parentCourse && (
                             <div className="flex items-center gap-1.5">
@@ -121,11 +124,11 @@ export default function Show({ auth, organization, module, courses }) {
                     </div>
                 </div>
 
-                {/* Уроки */}
+                {/* Уроки — только здесь работает DnD */}
                 <div className="glass-card p-6 md:p-8">
-                    {module?.lessons && module.lessons.length > 0 ? (
+                    {moduleLessons.length > 0 ? (
                         <SortableLessons
-                            lessons={module.lessons}
+                            lessons={moduleLessons}
                             module={module}
                             organization={organization}
                         />
@@ -192,7 +195,7 @@ export default function Show({ auth, organization, module, courses }) {
                 isOpen={isEditModuleModalOpen}
                 onClose={() => setIsEditModuleModalOpen(false)}
                 module={module}
-                courses={courses.data}
+                courses={courses}
                 organization={organization}
                 onSuccess={handleModuleEdited}
             />

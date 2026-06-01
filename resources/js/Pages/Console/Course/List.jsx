@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateCourseForm from '@/Pages/Console/Course/CreateCourseForm';
 import SortableCourses from '@/Pages/Console/Course/SortableCourses';
+import Pagination from "@/Pages/Console/Pagination.jsx";
 
 export default function List({ auth, organization, courses }) {
     const { filters: initialFilters = {} } = usePage().props;
@@ -18,6 +19,7 @@ export default function List({ auth, organization, courses }) {
     });
     const [showFilters, setShowFilters] = useState(false);
     const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
+    const [isReordering, setIsReordering] = useState(false);
 
     const applyFilters = (override = {}) => {
         const params = { ...filters, ...override };
@@ -252,7 +254,14 @@ export default function List({ auth, organization, courses }) {
                     organization={organization}
                     courses={courses.data}
                     onSaveOrder={handleSaveOrder}
+                    onReorderingChange={setIsReordering}
                 />
+                {!isReordering && (
+                    <Pagination
+                        meta={courses.meta}
+                        links={courses.links}
+                    />
+                )}
             </div>
 
             <CreateCourseForm

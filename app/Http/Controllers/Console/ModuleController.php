@@ -47,9 +47,9 @@ class ModuleController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // Убрали LOWER() и whereRaw, используем нативный LIKE
-                    $sub->where('title', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                    // Убрали LOWER() и whereRaw, используем нативный ILIKE
+                    $sub->where('title', 'ILIKE', "%{$search}%")
+                        ->orWhere('description', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(!empty($filters['course_id']), fn($q) => $q->where('course_id', $filters['course_id']))
@@ -71,12 +71,14 @@ class ModuleController extends Controller
             }, fn($q) => $q->orderBy('order'))
             ->paginate(20); // ✅ Пагинация вместо get()
 
-        // ✅ pluck возвращает коллекцию [id => title], что идеально для <select> и экономит память
-        $courses = $organization->courses()->orderBy('title')->pluck('title', 'id');
+        $courses = $organization->courses()
+            ->select(['id', 'title', 'organization_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/Module/List', [
             'organization' => new OrganizationResource($organization),
-            'courses'      => $courses, // Передаем как массив/коллекцию, а не Resource
+            'courses'      => $courses,
             'modules'      => ModuleResource::collection($modules),
             'filters'      => $filters,
         ]);
@@ -88,18 +90,27 @@ class ModuleController extends Controller
         $this->authorize('consoleAction', $organization);
         abort_unless($module->organization_id === $organization->id, 404);
 
-        // ✅ Объединили загрузку связей в один запрос
         $module->load([
-            'lessons' => fn($query) => $query->orderBy('order'),
-            'exam'
+            'lessons' => function ($query) {
+                $query->select(['id', 'title', 'description', 'is_active', 'order', 'module_id', 'organization_id'])
+                    ->withCount(['tasks', 'materials'])
+                    ->orderBy('order');
+            },
+            'exam' => function ($query) {
+                $query->withCount('questions');
+            }
         ]);
 
-        $courses = $organization->courses()->pluck('title', 'id');
+        // ✅ courses как массив для EditModuleForm
+        $courses = $organization->courses()
+            ->select(['id', 'title', 'organization_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/Module/Show', [
             'organization' => new OrganizationResource($organization),
-            'module'       => new ModuleResource($module),
-            'courses'      => $courses,
+            'module' => new ModuleResource($module),
+            'courses' => $courses,
         ]);
     }
 
@@ -160,14 +171,37 @@ class ModuleController extends Controller
 
         $validated = $request->validated();
 
-        // ✅ Один SQL-запрос вместо N запросов в цикле
-        $updates = collect($validated['items'])->map(fn($item) => [
-            'id'    => $item['id'],
-            'order' => $item['order'],
-        ])->toArray();
-
-        Module::upsert($updates, ['id'], ['order']);
+        DB::transaction(function () use ($validated, $course) {
+            foreach ($validated['items'] as $item) {
+                Module::where('id', $item['id'])
+                    ->where('course_id', $course->id)
+                    ->update(['order' => $item['order']]);
+            }
+        });
 
         return back()->with('success', 'Порядок модулей обновлён');
+    }
+
+    public function allForReorder(Organization $organization, Course $course, Request $request)
+    {
+        $this->authorize('consoleAction', $organization);
+        abort_unless($course->organization_id === $organization->id, 404);
+
+        $limit = $request->get('limit', 100);
+        $offset = $request->get('offset', 0);
+
+        $modules = $course->modules()
+            ->select(['id', 'title', 'description', 'is_active', 'order', 'course_id', 'organization_id'])
+            ->withCount('lessons')
+            ->orderBy('order')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        return response()->json([
+            'data' => ModuleResource::collection($modules),
+            'has_more' => $modules->count() === $limit,
+            'total' => $course->modules()->count(),
+        ]);
     }
 }

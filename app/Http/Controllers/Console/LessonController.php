@@ -42,9 +42,9 @@ class LessonController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // Нативный LIKE в MySQL (utf8mb4_unicode_ci) нечувствителен к регистру
-                    $sub->where('title', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                    // Нативный ILIKE в MySQL (utf8mb4_unicode_ci) нечувствителен к регистру
+                    $sub->where('title', 'ILIKE', "%{$search}%")
+                        ->orWhere('description', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(!empty($filters['module_id']), function ($q) use ($filters) {
@@ -95,7 +95,7 @@ class LessonController extends Controller
 
         return Inertia::render('Console/Lesson/List', [
             'organization' => new OrganizationResource($organization),
-            'modules'      => ModuleResource::collection($modules),
+            'modules'      => $modules,
             'lessons'      => LessonResource::collection($lessons),
             'filters'      => $filters,
         ]);
@@ -112,7 +112,10 @@ class LessonController extends Controller
             'homework'
         ]);
 
-        $modules = $organization->modules()->pluck('title', 'id'); // ✅ pluck
+        $modules = $organization->modules()
+            ->select(['id', 'title', 'organization_id'])
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Console/Lesson/Show', [
             'organization' => new OrganizationResource($organization),
@@ -176,13 +179,13 @@ class LessonController extends Controller
 
         $validated = $request->validated();
 
-        // ✅ Один SQL-запрос вместо N запросов в цикле
-        $updates = collect($validated['items'])->map(fn($item) => [
-            'id'    => $item['id'],
-            'order' => $item['order'],
-        ])->toArray();
-
-        Lesson::upsert($updates, ['id'], ['order']);
+        DB::transaction(function () use ($validated, $module) {
+            foreach ($validated['items'] as $item) {
+                Lesson::where('id', $item['id'])
+                    ->where('module_id', $module->id)
+                    ->update(['order' => $item['order']]);
+            }
+        });
 
         return back()->with('success', 'Порядок уроков обновлён');
     }

@@ -38,6 +38,14 @@ class Course extends Model
         return $this->hasMany(StudentCourse::class);
     }
 
+    public function groups(): BelongsToMany
+    {
+        return $this->belongsToMany(Group::class, 'group_course', 'course_id', 'group_id')
+            ->using(GroupCourse::class)
+            ->withPivot('granted_at', 'granted_by')
+            ->withTimestamps(false);
+    }
+
     protected static function boot()
     {
         parent::boot();

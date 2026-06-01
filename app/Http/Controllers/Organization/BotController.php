@@ -126,6 +126,6 @@ class BotController extends Controller
         // Отправляем в очередь, чтобы не блокировать сервер
         dispatch(new ToggleBotStatusJob($bot, $newStatus));
 
-        return back()->with('success', 'Задача на изменение статуса отправлена.');
+        return back()->with('success', 'Бот запускается.');
     }
 }

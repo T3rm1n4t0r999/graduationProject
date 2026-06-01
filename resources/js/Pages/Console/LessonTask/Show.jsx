@@ -138,7 +138,7 @@ export default function Show({ auth, organization, task, lessons }) {
                 isOpen={isEditTaskModalOpen}
                 onClose={() => setIsEditTaskModalOpen(false)}
                 task={task}
-                lessons={lessons.data}
+                lessons={lessons}
                 organization={organization}
                 onSuccess={handleTaskEdited}
             />

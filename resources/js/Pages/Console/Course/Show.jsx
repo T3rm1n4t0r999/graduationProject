@@ -4,18 +4,11 @@ import { useState } from 'react';
 import ConfirmDeleteModal from "@/Components/ConfirmDeleteModal.jsx";
 import EditCourseForm from "@/Pages/Console/Course/EditCourseForm.jsx";
 import SortableModules from "@/Pages/Console/Module/SortableModules.jsx";
-import CreateModuleForm from "@/Pages/Console/Module/CreateModuleForm.jsx";
 
 export default function Show({ auth, organization, course }) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isCreateModuleModalOpen, setIsCreateModuleModalOpen] = useState(false);
-
-    const handleModuleCreated = () => {
-        setIsCreateModuleModalOpen(false);
-        router.reload({ only: ['modules'], preserveScroll: true });
-    };
 
     const handleCourseEdited = () => {
         setIsEditModalOpen(false);
@@ -39,6 +32,9 @@ export default function Show({ auth, organization, course }) {
             }
         );
     };
+
+    // Массив модулей из связи курса
+    const courseModules = course?.modules || [];
 
     return (
         <ConsoleLayout auth={auth} organization={organization}>
@@ -86,17 +82,17 @@ export default function Show({ auth, organization, course }) {
                     </div>
 
                     {/* Мета-информация */}
-                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t"
+                         style={{ borderColor: 'var(--color-border)' }}>
                         <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
                             <span>Порядок:</span>
                             <span className="font-semibold text-main">{course.order}</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-meta bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-1.5">
                             <span>Модулей:</span>
-                            <span className="font-semibold text-main">{course?.modules?.length ?? 0}</span>
+                            <span className="font-semibold text-main">{courseModules.length}</span>
                         </div>
 
-                        {/* Статус активности */}
                         <div
                             className={`flex items-center gap-1.5 text-sm rounded-lg px-3 py-1.5 ${
                                 course.is_active
@@ -108,7 +104,6 @@ export default function Show({ auth, organization, course }) {
                             <span>{course.is_active ? 'Активен' : 'Неактивен'}</span>
                         </div>
 
-                        {/* Статус автоназначения */}
                         {course.auto_assign && (
                             <div className="flex items-center gap-1 text-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg px-3 py-1.5">
                                 <span>Автоназначение</span>
@@ -117,24 +112,9 @@ export default function Show({ auth, organization, course }) {
                     </div>
                 </div>
 
-                {/* Модули курса */}
+                {/* Модули курса — только здесь работает DnD */}
                 <div className="glass-card p-6 md:p-8">
-                    {course?.modules && course.modules.length > 0 ? (
-                        <SortableModules
-                            modules={course.modules}
-                            organizationId={organization.id}
-                        />
-                    ) : (
-                        <div className="text-center py-10">
-                            <p className="text-meta mb-4">В этом курсе пока нет модулей.</p>
-                            <button
-                                onClick={() => setIsCreateModuleModalOpen(true)}
-                                className="btn-primary"
-                            >
-                                + Создать модуль
-                            </button>
-                        </div>
-                    )}
+                    <SortableModules modules={courseModules} />
                 </div>
 
                 {/* Модальные окна */}
@@ -153,14 +133,6 @@ export default function Show({ auth, organization, course }) {
                     title="Удаление курса"
                     message={`Вы действительно хотите удалить курс «${course.title}»? Все модули и уроки внутри будут удалены. Это действие необратимо.`}
                     processing={isDeleting}
-                />
-
-                <CreateModuleForm
-                    isOpen={isCreateModuleModalOpen}
-                    onClose={() => setIsCreateModuleModalOpen(false)}
-                    organization={organization}
-                    course={course}
-                    onSuccess={handleModuleCreated}
                 />
             </div>
 

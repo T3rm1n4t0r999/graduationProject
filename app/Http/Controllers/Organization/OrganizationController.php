@@ -37,7 +37,7 @@ class OrganizationController extends Controller
 
                 $organization = Organization::create([
                     'name'       => $validated['name'],
-                    'email'      => $userEmailLower,
+                    'email'      => $orgEmail,
                     'owner_id'   => $user->id,
                     'status'     => $requiresVerification
                         ? OrganizationStatus::PendingVerification

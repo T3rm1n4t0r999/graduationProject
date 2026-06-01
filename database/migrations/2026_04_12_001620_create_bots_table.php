@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('bot_url');
             $table->text('token');
-            $table->boolean('is_active')->default('false')->change();
+            $table->boolean('is_active')->default('false');
             $table->foreignId('organization_id')->unique()->constrained()->onDelete('cascade');
             $table->timestamps();
         });

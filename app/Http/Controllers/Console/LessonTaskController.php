@@ -40,9 +40,9 @@ class LessonTaskController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // Нативный LIKE в MySQL (utf8mb4_unicode_ci) нечувствителен к регистру
-                    $sub->where('title', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                    // Нативный ILIKE в MySQL (utf8mb4_unicode_ci) нечувствителен к регистру
+                    $sub->where('title', 'ILIKE', "%{$search}%")
+                        ->orWhere('description', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(!empty($filters['lesson_id']), fn($q) => $q->where('lesson_id', $filters['lesson_id']))
@@ -72,9 +72,9 @@ class LessonTaskController extends Controller
 
         return Inertia::render('Console/LessonTask/List', [
             'organization' => new OrganizationResource($organization),
-            'lessons'      => LessonResource::collection($lessons),
-            'tasks'        => LessonTaskResource::collection($lessonTasks),
-            'filters'      => $filters,
+            'lessons' => $lessons,
+            'tasks' => LessonTaskResource::collection($lessonTasks),
+            'filters' => $filters,
         ]);
     }
 
@@ -94,7 +94,7 @@ class LessonTaskController extends Controller
         return Inertia::render('Console/LessonTask/Show', [
             'organization' => new OrganizationResource($organization),
             'task'         => new LessonTaskResource($task),
-            'lessons'      => LessonResource::collection($lessons),
+            'lessons'      => $lessons,
         ]);
     }
 
@@ -156,13 +156,13 @@ class LessonTaskController extends Controller
 
         $validated = $request->validated();
 
-        // ✅ Один SQL-запрос вместо N запросов в цикле
-        $updates = collect($validated['items'])->map(fn($item) => [
-            'id'    => $item['id'],
-            'order' => $item['order'],
-        ])->toArray();
-
-        LessonTask::upsert($updates, ['id'], ['order']);
+        DB::transaction(function () use ($validated, $lesson) {
+            foreach ($validated['items'] as $item) {
+                LessonTask::where('id', $item['id'])
+                    ->where('lesson_id', $lesson->id)
+                    ->update(['order' => $item['order']]);
+            }
+        });
 
         return back()->with('success', 'Порядок заданий обновлен');
     }

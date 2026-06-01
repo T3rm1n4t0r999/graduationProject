@@ -17,6 +17,7 @@ use App\Models\Homework;
 use App\Models\LessonTask;
 use App\Models\Organization;
 use App\Models\Question;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
@@ -36,7 +37,7 @@ class QuestionController extends Controller
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
             'questions'    => QuestionResource::collection($questions),
-            'tasks'        => LessonTaskResource::collection($tasks),
+            'tasks'        => $tasks,
             'context'      => 'task',
             'filters'      => $filters,
         ]);
@@ -52,7 +53,7 @@ class QuestionController extends Controller
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
             'questions'    => QuestionResource::collection($questions),
-            'homeworks'    => HomeworkResource::collection($homeworks),
+            'homeworks'    => $homeworks,
             'context'      => 'homework',
             'filters'      => $filters,
         ]);
@@ -68,7 +69,7 @@ class QuestionController extends Controller
         return Inertia::render('Console/Question/List', [
             'organization' => new OrganizationResource($organization),
             'questions'    => QuestionResource::collection($questions),
-            'exams'        => ExamResource::collection($exams),
+            'exams'        => $exams,
             'context'      => 'exam',
             'filters'      => $filters,
         ]);
@@ -135,6 +136,11 @@ class QuestionController extends Controller
         $validated = $request->validated();
         $validated['organization_id'] = $organization->id;
 
+        // ✅ Нормализуем questionable_type перед сохранением
+        if (!empty($validated['questionable_type'])) {
+            $validated['questionable_type'] = Question::normalizeMorphType($validated['questionable_type']);
+        }
+
         // ✅ Защита от IDOR: проверяем, что родитель принадлежит организации
         $this->validateParentBelongsToOrganization($validated, $organization);
 
@@ -153,6 +159,11 @@ class QuestionController extends Controller
         abort_unless($question->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
+
+        // ✅ Нормализуем questionable_type
+        if (!empty($validated['questionable_type'])) {
+            $validated['questionable_type'] = Question::normalizeMorphType($validated['questionable_type']);
+        }
 
         // ✅ Защита от IDOR при смене родителя
         if (isset($validated['questionable_id']) && isset($validated['questionable_type'])) {
@@ -191,23 +202,25 @@ class QuestionController extends Controller
         $validated = $request->validated();
         $params = $request->route()->parameters();
 
+        // Из параметров маршрута извлекаем модель задания, домашней работы или экзамена
         $questionable = collect($params)->first(fn($v) =>
             $v instanceof LessonTask || $v instanceof Homework || $v instanceof Exam
         );
 
         abort_unless($questionable && $questionable->organization_id === $organization->id, 404);
 
-        // ✅ Один SQL-запрос (upsert) вместо N запросов в цикле
-        $updates = collect($validated['items'])->map(fn($item) => [
-            'id'    => $item['id'],
-            'order' => $item['order'],
-        ])->toArray();
+        $questionableType = $questionable->getMorphClass();
+        $questionableId = $questionable->id;
 
-        Question::upsert($updates, ['id'], ['order']);
+        foreach ($validated['items'] as $item) {
+            Question::where('id', $item['id'])
+                ->where('questionable_type', $questionableType)
+                ->where('questionable_id', $questionableId)
+                ->update(['order' => $item['order']]);
+        }
 
         return back()->with('success', 'Порядок вопросов обновлен');
     }
-
 
     private function getFilteredQuestions(Organization $organization, Request $request, string $morphType, string $parentIdField): array
     {
@@ -229,9 +242,9 @@ class QuestionController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // ✅ Нативный LIKE вместо LOWER() + whereRaw
-                    $sub->where('question', 'LIKE', "%{$search}%")
-                        ->orWhere('explanation', 'LIKE', "%{$search}%");
+                    // ✅ Нативный ILIKE вместо LOWER() + whereRaw
+                    $sub->where('question', 'ILIKE', "%{$search}%")
+                        ->orWhere('explanation', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(!empty($filters[$parentIdField]), fn($q) => $q->where('questionable_id', $filters[$parentIdField]))

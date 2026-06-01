@@ -37,9 +37,9 @@ class HomeworkController extends Controller
             ->when(!empty($filters['search']), function ($q) use ($filters) {
                 $search = $filters['search'];
                 $q->where(function ($sub) use ($search) {
-                    // ✅ Нативный LIKE вместо LOWER() + whereRaw
-                    $sub->where('title', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                    // ✅ Нативный ILIKE вместо LOWER() + whereRaw
+                    $sub->where('title', 'ILIKE', "%{$search}%")
+                        ->orWhere('description', 'ILIKE', "%{$search}%");
                 });
             })
             ->when(!empty($filters['lesson_id']), fn($q) => $q->where('lesson_id', $filters['lesson_id']))
@@ -80,9 +80,9 @@ class HomeworkController extends Controller
         return Inertia::render('Console/Homework/List', [
             'organization' => new OrganizationResource($organization),
             'homeworks'    => HomeworkResource::collection($homeworks),
-            'lessons'      => LessonResource::collection($freeLessons),
+            'lessons'      => $freeLessons,
             'filters'      => $filters,
-            'allLessons'   => LessonResource::collection($allLessons),
+            'allLessons'   => $allLessons,
         ]);
     }
 
@@ -109,7 +109,7 @@ class HomeworkController extends Controller
         return Inertia::render('Console/Homework/Show', [
             'organization' => new OrganizationResource($organization),
             'homework'     => new HomeworkResource($homework),
-            'lessons'      => LessonResource::collection($availableLessons),
+            'lessons'      => $availableLessons,
         ]);
     }
 

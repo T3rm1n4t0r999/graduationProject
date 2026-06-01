@@ -18,7 +18,6 @@ class OrganizationUpdateRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('organizations', 'email')->ignore($organization->id)
             ],
         ];
     }

@@ -3,6 +3,8 @@ import { router, usePage } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateModuleForm from '@/Pages/Console/Module/CreateModuleForm';
 import ModuleCard from "@/Pages/Console/Module/ModuleCard.jsx";
+import Pagination from "@/Pages/Console/Pagination.jsx";
+
 
 export default function List({ auth, organization, modules, courses }) {
     const { filters: initialFilters = {} } = usePage().props;
@@ -58,7 +60,11 @@ export default function List({ auth, organization, modules, courses }) {
             sort: 'order',
             direction: 'asc',
         });
-        router.get(route('module.index', { organization: organization.id }), {}, { preserveState: true, replace: true });
+        router.get(
+            route('module.index', { organization: organization.id }),
+            {},
+            { preserveState: true, replace: true }
+        );
     };
 
     const handleModuleCreated = () => {
@@ -91,7 +97,7 @@ export default function List({ auth, organization, modules, courses }) {
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-main">Модули</h1>
                                 <p className="text-meta mt-1">
-                                    Всего: <span className="font-semibold text-main">{modules.total ?? modules.data.length}</span>
+                                    Всего: <span className="font-semibold text-main">{modules.total ?? 0}</span>
                                 </p>
                             </div>
                         </div>
@@ -135,7 +141,7 @@ export default function List({ auth, organization, modules, courses }) {
                                     className="form-input-glass"
                                 >
                                     <option value="">Все курсы</option>
-                                    {courses?.data?.map(course => (
+                                    {courses?.map(course => (
                                         <option key={course.id} value={course.id}>{course.title}</option>
                                     ))}
                                 </select>
@@ -237,20 +243,27 @@ export default function List({ auth, organization, modules, courses }) {
                     </form>
                 )}
 
-                {/* Список модулей */}
+                {/* Список модулей с пагинацией */}
                 {modules.data.length === 0 ? (
                     <div className="glass-card p-12 text-center text-meta">
                         Пока нет ни одного модуля.
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {modules.data.map((module) => (
-                            <ModuleCard
-                                key={module.id}
-                                module={module}
-                                organization={organization}
-                            />
-                        ))}
+                    <div className="glass-card p-6 md:p-8">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {modules.data.map((module) => (
+                                <ModuleCard
+                                    key={module.id}
+                                    module={module}
+                                    organization={organization}
+                                />
+                            ))}
+                        </div>
+
+                        <Pagination
+                            meta={modules.meta}
+                            links={modules.links}
+                        />
                     </div>
                 )}
             </div>
@@ -259,7 +272,7 @@ export default function List({ auth, organization, modules, courses }) {
                 isOpen={isCreateModuleModalOpen}
                 onClose={() => setIsCreateModuleModalOpen(false)}
                 organization={organization}
-                courses={courses.data}
+                courses={courses}
                 onSuccess={handleModuleCreated}
             />
 

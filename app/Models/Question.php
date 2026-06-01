@@ -77,6 +77,35 @@ class Question extends Model
         return $this->morphTo();
     }
 
+    public static function normalizeMorphType(?string $type): ?string
+    {
+        if (!$type) return null;
+
+        // Если передан полный класс — пытаемся получить алиас
+        if (class_exists($type)) {
+            $alias = array_search($type, Relation::morphMap(), true);
+            return $alias ?: $type;
+        }
+
+        // Если передан алиас — возвращаем как есть
+        return $type;
+    }
+
+    /**
+     * ✅ Единый способ получить следующий order для родителя
+     */
+    public static function getNextOrder(string $questionableType, int $questionableId): int
+    {
+        $normalizedType = self::normalizeMorphType($questionableType);
+
+        $max = static::where('questionable_type', $normalizedType)
+            ->where('questionable_id', $questionableId)
+            ->max('order');
+
+        return ($max ?? 0) + 1;
+    }
+
+
     /**
      * Boot метод для обновления max_score у родительского задания при изменении вопроса
      */
@@ -84,35 +113,49 @@ class Question extends Model
     {
         parent::boot();
 
+        // ✅ Нормализуем questionable_type перед сохранением
+        static::saving(function (Question $question) {
+            if ($question->questionable_type) {
+                $question->questionable_type = self::normalizeMorphType($question->questionable_type);
+            }
+        });
+
         static::creating(function (Question $question) {
             if (empty($question->order)) {
-                $question->order = static::where('questionable_type', $question->questionable_type)
-                        ->where('questionable_id', $question->questionable_id)
-                        ->max('order') + 1;
+                $question->order = self::getNextOrder(
+                    $question->questionable_type,
+                    $question->questionable_id
+                );
             }
         });
 
         static::created(function (Question $question) {
-            static::updateParentMaxScore($question->questionable_type, $question->questionable_id);
+            self::updateParentMaxScore($question->questionable_type, $question->questionable_id);
         });
 
         static::deleted(function (Question $question) {
-            static::updateParentMaxScore($question->questionable_type, $question->questionable_id);
+            // ❌ Убран decrement('order') — он вызывал блокировки БД
+            self::updateParentMaxScore($question->questionable_type, $question->questionable_id);
         });
 
         static::updated(function (Question $question) {
             $original = $question->getOriginal();
-            $oldParentType = $original['questionable_type'] ?? null;
+            $oldParentType = self::normalizeMorphType($original['questionable_type'] ?? null);
             $oldParentId   = $original['questionable_id'] ?? null;
-            $newParentType = $question->questionable_type;
+            $newParentType = $question->questionable_type; // уже нормализован в saving
             $newParentId   = $question->questionable_id;
 
             if ($oldParentType !== $newParentType || $oldParentId !== $newParentId) {
-                if ($oldParentType && $oldParentId) static::updateParentMaxScore($oldParentType, $oldParentId);
-                if ($newParentType && $newParentId) static::updateParentMaxScore($newParentType, $newParentId);
+                if ($oldParentType && $oldParentId) {
+                    self::updateParentMaxScore($oldParentType, $oldParentId);
+                }
+                if ($newParentType && $newParentId) {
+                    self::updateParentMaxScore($newParentType, $newParentId);
+                }
             } elseif ($question->isDirty('points') || $question->isDirty('is_active')) {
-                // ✅ Добавлена проверка isDirty('is_active'), так как неактивные вопросы не должны учитываться в max_score
-                if ($newParentType && $newParentId) static::updateParentMaxScore($newParentType, $newParentId);
+                if ($newParentType && $newParentId) {
+                    self::updateParentMaxScore($newParentType, $newParentId);
+                }
             }
         });
     }

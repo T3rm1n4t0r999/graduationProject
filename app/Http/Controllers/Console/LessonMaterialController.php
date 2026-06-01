@@ -16,6 +16,7 @@ use App\Models\Lesson;
 use App\Models\LessonMaterial;
 use App\Models\LessonTask;
 use App\Models\Organization;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
@@ -46,7 +47,7 @@ class LessonMaterialController extends Controller
 
         return Inertia::render('Console/LessonMaterial/List', [
             'organization' => new OrganizationResource($organization),
-            'lessons'      => LessonResource::collection($lessons),
+            'lessons'      => $lessons,
             'materials'    => LessonMaterialResource::collection($lessonMaterials),
         ]);
     }
@@ -72,7 +73,9 @@ class LessonMaterialController extends Controller
 
         $material = LessonMaterial::create($validated);
 
-        $this->handleFileUpload($material, $request);
+        if ($request->hasFile('image')) {
+            $this->handleFileUpload($material, $request->file('image'));
+        }
 
         return back()->with('success', 'Материал успешно создан');
     }
@@ -95,7 +98,7 @@ class LessonMaterialController extends Controller
         return Inertia::render('Console/LessonMaterial/Show', [
             'organization' => new OrganizationResource($organization),
             'material'     => new LessonMaterialResource($material),
-            'lessons'      => LessonResource::collection($lessons),
+            'lessons'      => $lessons,
         ]);
     }
 
@@ -123,7 +126,8 @@ class LessonMaterialController extends Controller
 
         if ($request->hasFile('image')) {
             $validated['video_url'] = null;
-            $this->handleFileUpload($material, $request);
+            // ✅ Передаем сам объект файла
+            $this->handleFileUpload($material, $request->file('image'));
         }
 
         $material->update($validated);
@@ -149,27 +153,29 @@ class LessonMaterialController extends Controller
         ])->with('success', 'Материал успешно удален');
     }
 
-    public function reorder(LessonMaterialReorderRequest $request, Organization $organization, Lesson $lesson)
+    public function reorder(ModuleReorderRequest $request, Organization $organization, Lesson $lesson)
     {
         $this->authorize('consoleAction', $organization);
         abort_unless($lesson->organization_id === $organization->id, 404);
 
         $validated = $request->validated();
 
-        // ✅ Один SQL-запрос вместо N запросов в цикле
-        $updates = collect($validated['items'])->map(fn($item) => [
-            'id'    => $item['id'],
-            'order' => $item['order'],
-        ])->toArray();
-
-        LessonMaterial::upsert($updates, ['id'], ['order']);
+        DB::transaction(function () use ($validated, $lesson) {
+            foreach ($validated['items'] as $item) {
+                LessonMaterial::where('id', $item['id'])
+                    ->where('lesson_id', $lesson->id)
+                    ->update(['order' => $item['order']]);
+            }
+        });
 
         return back()->with('success', 'Порядок материалов обновлен');
     }
 
-    private function handleFileUpload(LessonMaterial $material, $request): void
+    private function handleFileUpload(LessonMaterial $material, ?UploadedFile $file): void
     {
-        $file = $request->file('image');
+        if (!$file) {
+            return;
+        }
         $mime = $file->getMimeType();
         $folder = str_starts_with($mime, 'image/') ? 'lesson_materials/images' : 'lesson_materials/videos';
 

@@ -7,16 +7,15 @@ export default function EditTaskForm({ isOpen, onClose, onSuccess, task, organiz
         title: task?.title || '',
         description: task?.description || '',
         lesson_id: task?.lesson_id || '',
-        is_active: task?.is_active ? true : false,
-        max_attempts: task?.max_attempts || '',
+        is_active: !!task?.is_active,
+        max_attempts: task?.max_attempts || 0,
     });
-
     const submit = (e) => {
         e.preventDefault();
         put(
             route('task.update', {
                 organization: organization.id,
-                lessonTask: task.id,
+                task: task.id,
             }),
             {
                 preserveState: true,
@@ -179,10 +178,19 @@ export default function EditTaskForm({ isOpen, onClose, onSuccess, task, organiz
                                         </label>
                                         <input
                                             type="number"
-                                            value={data.max_attempts}
-                                            onChange={(e) => setData('max_attempts', e.target.value)}
-                                            className="form-input-glass min-h-[80px]"
-                                            placeholder="Оставьте пустым для неограниченного количества"
+                                            min="0"
+                                            value={data.max_attempts ?? ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') {
+                                                    setData('max_attempts', '');
+                                                } else {
+                                                    const num = parseInt(val, 10);
+                                                    setData('max_attempts', isNaN(num) ? '' : Math.max(0, num));
+                                                }
+                                            }}
+                                            className="form-input-glass"
+                                            placeholder="Неограниченно"
                                         />
                                         {errors.max_attempts && <p className="mt-1 text-sm text-red-500">{errors.max_attempts}</p>}
                                     </div>

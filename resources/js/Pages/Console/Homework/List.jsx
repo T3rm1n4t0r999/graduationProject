@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, usePage, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateHomeworkForm from './CreateHomeworkForm';
-import Pagination from '@/Components/Pagination';
+import Pagination from "@/Pages/Console/Pagination.jsx";
 
 function HomeworkCard({ homework, organizationId }) {
     return (
@@ -314,7 +314,7 @@ export default function List({ auth, organization, homeworks, lessons, allLesson
                 isOpen={isCreateHomeworkModalOpen}
                 onClose={() => setIsCreateHomeworkModalOpen(false)}
                 organization={organization}
-                lessons={lessons.data || lessons}
+                lessons={lessons}
                 onSuccess={handleHomeworkCreated}
             />
 
