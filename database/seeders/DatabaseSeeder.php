@@ -20,43 +20,35 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        for ($i = 1; $i <= 10; $i++) {
+            $user = User::create([
+                'name'              => "User{$i}",
+                'email'             => "user{$i}@example.com",
+                'password'          => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]);
 
-        User::create([
-            'name' => 'Super Admin',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
-
-        Organization::create([
-            'name' => 'Super Admin',
-            'owner_id' => 1,
-            'email' => 'admin@example.com',
-            'email_verified_at' => now(),
-            'status' => 'active',
-        ]);
-
-        OrganizationUser::create([
-            'organization_id' => 1,
-            'user_id' => 1,
-            'role' => 'owner',
-            'is_active' => true,
-        ]);
-
-        Bot::create([
-            'name' => 'Super Admin',
-            'bot_url' => '@online_ege_school_bot',
-            'token' => '7830450993:AAHIx2gzOr_2ZFjUGg-HR-o0Ofh5BUkNgiQ',
-            'organization_id' => 1,
-        ]);
-
-        Invitation::create([
-            'organization_id' => 1,
-            'sender_id' => 1,
-            'email' => 'admin@example.com',
-            'type' => 'student',
-            'token'=>'123',
-            'expires_at' => now()->addDays(30),
-        ]);
+            OrganizationUser::create([
+                'organization_id' => 1,
+                'user_id'         => $user->id,
+                'role'            => 'manager',
+                'is_active'       => true,
+            ]);
+        }
+//        Bot::create([
+//            'name' => 'Super Admin',
+//            'bot_url' => '@online_ege_school_bot',
+//            'token' => '7830450993:AAHIx2gzOr_2ZFjUGg-HR-o0Ofh5BUkNgiQ',
+//            'organization_id' => 1,
+//        ]);
+//
+//        Invitation::create([
+//            'organization_id' => 1,
+//            'sender_id' => 1,
+//            'email' => 'admin@example.com',
+//            'type' => 'student',
+//            'token'=>'123',
+//            'expires_at' => now()->addDays(30),
+//        ]);
     }
 }

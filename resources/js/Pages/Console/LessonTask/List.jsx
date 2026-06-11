@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, usePage, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateTaskForm from "@/Pages/Console/LessonTask/CreateTaskForm.jsx";
-import Pagination from "@/Pages/Console/Pagination.jsx"; // ✅ Импорт пагинации
+import Pagination from "@/Components/Pagination.jsx"; // ✅ Импорт пагинации
 
 function TaskCard({ task, organizationId }) {
     return (

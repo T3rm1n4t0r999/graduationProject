@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, usePage, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateHomeworkForm from './CreateHomeworkForm';
-import Pagination from "@/Pages/Console/Pagination.jsx";
+import Pagination from "@/Components/Pagination.jsx";
 
 function HomeworkCard({ homework, organizationId }) {
     return (

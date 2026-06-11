@@ -18,6 +18,8 @@ use App\Http\Controllers\Organization\InvitationController;
 use App\Http\Controllers\Organization\OrganizationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomeController;
+use App\Models\Bot;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -29,6 +31,19 @@ Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/guide', function () {
     return Inertia::render('Guide');
 })->name('guide');
+
+Route::post('/bot-manager/active-bots', function (Request $request) {
+    if ($request->header('X-Manager-Token') !== config('services.bot_manager.secret')) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    $bots = Bot::where('is_active', true)->get(['id', 'token']);
+
+    return response()->json([
+        'bots' => $bots->map(fn($b) => ['id' => $b->id, 'token' => $b->token])
+    ]);
+});
+
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

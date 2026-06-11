@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import { Link } from '@inertiajs/react';
 import CreateQuestionForm from "@/Pages/Console/Question/CreateQuestionForm.jsx";
-import Pagination from "@/Pages/Console/Pagination.jsx";
+import Pagination from "@/Components/Pagination.jsx";
 
 function QuestionCard({ question, organizationId }) {
     const getTypeLabel = (type) => {

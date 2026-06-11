@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('content')->nullable();
             $table->integer('order')->default(1);
-            $table->enum('material_type', ['theory', 'example', 'reference', 'video_lesson', 'article'])->default('theory');
+            $table->string('material_type')->nullable()->default('theory');
             $table->foreignId('lesson_id')
                 ->constrained('lessons')
                 ->cascadeOnDelete();

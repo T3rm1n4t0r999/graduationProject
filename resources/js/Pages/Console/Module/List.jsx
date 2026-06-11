@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateModuleForm from '@/Pages/Console/Module/CreateModuleForm';
 import ModuleCard from "@/Pages/Console/Module/ModuleCard.jsx";
-import Pagination from "@/Pages/Console/Pagination.jsx";
+import Pagination from "@/Components/Pagination.jsx";
 
 
 export default function List({ auth, organization, modules, courses }) {

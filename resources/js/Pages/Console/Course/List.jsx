@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import CreateCourseForm from '@/Pages/Console/Course/CreateCourseForm';
 import SortableCourses from '@/Pages/Console/Course/SortableCourses';
-import Pagination from "@/Pages/Console/Pagination.jsx";
+import Pagination from "@/Components/Pagination.jsx";
 
 export default function List({ auth, organization, courses }) {
     const { filters: initialFilters = {} } = usePage().props;
@@ -63,7 +63,6 @@ export default function List({ auth, organization, courses }) {
 
     const handleCourseCreated = () => {
         setIsCreateCourseModalOpen(false);
-        router.reload({ only: ['courses'], preserveScroll: true });
     };
 
     const handleSaveOrder = async (orderedItems) => {
@@ -75,7 +74,6 @@ export default function List({ auth, organization, courses }) {
                     preserveState: true,
                     preserveScroll: true,
                     onSuccess: () => {
-                        router.reload({ only: ['courses'], preserveScroll: true });
                         resolve();
                     },
                     onError: (error) => reject(error),

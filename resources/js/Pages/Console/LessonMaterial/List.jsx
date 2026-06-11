@@ -3,7 +3,7 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import CreateMaterialForm from "@/Pages/Console/LessonMaterial/CreateMaterialForm.jsx";
 import MaterialCard from "@/Pages/Console/LessonMaterial/MaterialCard.jsx";
-import Pagination from "@/Pages/Console/Pagination.jsx"; // ✅ Добавлена пагинация
+import Pagination from "@/Components/Pagination.jsx"; // ✅ Добавлена пагинация
 
 export default function List({ auth, organization, materials, lessons }) {
     const [isCreateMaterialModalOpen, setIsCreateMaterialModalOpen] = useState(false);

@@ -118,13 +118,13 @@ class OrganizationController extends Controller
         // 6. Пагинация пользователей (без изменений)
         $users = $organization->users()
             ->select(['users.id', 'users.name', 'users.email'])
-            ->latest('organization_user.joined_at')
+            ->oldest('organization_user.joined_at')
             ->paginate(5, ['users.id', 'users.name', 'users.email'], 'users_page')
             ->withQueryString();
 
         // 7. Приглашения (без изменений)
         $invitations = $organization->invitations()
-            ->select(['id', 'email', 'status', 'group_id', 'created_at'])
+            ->select(['id', 'email', 'status', 'group_id', 'created_at', 'type', 'accepted_at', 'expires_at'])
             ->with('group:id,name')
             ->latest('created_at')
             ->limit(20)

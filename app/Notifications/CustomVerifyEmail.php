@@ -3,11 +3,13 @@
 namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\VerifyEmail as VerifyEmailNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Lang;
 
-class CustomVerifyEmail extends VerifyEmailNotification
+class CustomVerifyEmail extends VerifyEmailNotification implements ShouldQueue
 {
+
     /**
      * Get the mail representation of the notification.
      *

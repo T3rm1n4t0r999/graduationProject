@@ -24,6 +24,7 @@ return [
 
     'bot_manager' => [
         'url' => env('BOT_MANAGER_URL'),
+        'secret' => env('BOT_MANAGER_SECRET'),
     ],
 
     'ses' => [

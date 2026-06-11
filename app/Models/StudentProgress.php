@@ -85,26 +85,62 @@ class StudentProgress extends Model
             }
         });
 
-        static::updated(function (StudentProgress $progress) {
-            $wasChecked = (bool) $progress->getOriginal('checked');
-            $isChecked = (bool) $progress->checked;
+        // Используем saved вместо updated, чтобы корректно отрабатывало и при создании, и при обновлении
+        static::saved(function (StudentProgress $progress) {
+            if (!$progress->student_id) {
+                return;
+            }
 
-            // ✅ Баллы учитываются в рейтинге ТОЛЬКО если работа проверена
-            $oldPoints = $wasChecked ? (int) $progress->getOriginal('points') : 0;
-            $newPoints = $isChecked ? (int) $progress->points : 0;
+            // 1. Находим лучший результат среди ВСЕХ проверенных попыток этого задания (включая текущую)
+            $newMax = static::where('student_id', $progress->student_id)
+                ->where('progressable_type', $progress->progressable_type)
+                ->where('progressable_id', $progress->progressable_id)
+                ->where('checked', true)
+                ->max('points') ?? 0;
 
-            $diffPoints = $newPoints - $oldPoints;
+            // 2. Находим лучший результат среди ДРУГИХ проверенных попыток этого задания
+            $otherMax = static::where('student_id', $progress->student_id)
+                ->where('progressable_type', $progress->progressable_type)
+                ->where('progressable_id', $progress->progressable_id)
+                ->where('id', '!=', $progress->id) // Исключаем текущую запись
+                ->where('checked', true)
+                ->max('points') ?? 0;
 
-            // ✅ Прямой запрос к БД избегает загрузки модели Student и рекурсии событий
-            if ($diffPoints !== 0 && $progress->student_id) {
+            // 3. Вспоминаем, сколько давала ЭТА попытка до сохранения
+            $thisAttemptOldPoints = (int) $progress->getOriginal('points');
+
+            // 4. Старый максимум для этого задания = max(старые очки этой попытки, лучшие очки других попыток)
+            $oldMax = max($thisAttemptOldPoints, $otherMax);
+
+            // 5. Считаем разницу и обновляем общий рейтинг студента
+            $diffPoints = (int) $newMax - (int) $oldMax;
+
+            if ($diffPoints !== 0) {
                 Student::where('id', $progress->student_id)->increment('score', $diffPoints);
             }
         });
 
         static::deleted(function (StudentProgress $progress) {
-            // ✅ Если удаляется проверенная работа, баллы должны списаться
-            if ($progress->checked && $progress->student_id) {
-                Student::where('id', $progress->student_id)->decrement('score', $progress->points);
+            if (!$progress->student_id) {
+                return;
+            }
+
+            // При удалении "другие попытки" становятся "всеми оставшимися"
+            $newMax = static::where('student_id', $progress->student_id)
+                ->where('progressable_type', $progress->progressable_type)
+                ->where('progressable_id', $progress->progressable_id)
+                ->where('checked', true)
+                ->max('points') ?? 0;
+
+            $wasChecked = (bool) $progress->checked;
+            $thisAttemptOldPoints = $wasChecked ? (int) $progress->points : 0;
+
+            $oldMax = max($thisAttemptOldPoints, $newMax);
+
+            $diffPoints = (int) $newMax - (int) $oldMax;
+
+            if ($diffPoints !== 0) {
+                Student::where('id', $progress->student_id)->increment('score', $diffPoints);
             }
         });
     }

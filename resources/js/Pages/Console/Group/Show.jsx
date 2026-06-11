@@ -5,6 +5,7 @@ import { router, Link } from '@inertiajs/react';
 import ConsoleLayout from '@/Layouts/ConsoleLayout';
 import AssignmentTab from "@/Pages/Console/Group/AssignmentTab.jsx";
 import CreateGroupInvitationForm from "@/Pages/Console/Group/CreateGroupInvitationForm.jsx";
+import EditGroupForm from "@/Pages/Console/Group/EditGroupForm.jsx"; // 👈 1. Импорт формы
 import Tooltip from "@/Components/Tooltip.jsx";
 
 function StudentsTab({ group, availableStudents, organization }) {
@@ -120,7 +121,9 @@ function StudentsTab({ group, availableStudents, organization }) {
 export default function Show({ auth, organization, group, availableStudents, availableCourses, availableHomeworks, availableExams }) {
     const [activeTab, setActiveTab] = useState('students');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // 👈 2. Состояние для модалки редактирования
     const [isHintVisible, setIsHintVisible] = useState(false);
+
     const tabs = {
         students: {
             label: 'Студенты',
@@ -181,7 +184,7 @@ export default function Show({ auth, organization, group, availableStudents, ava
     return (
         <ConsoleLayout auth={auth} organization={organization}>
             <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
-                {/* Заголовок (без эмодзи) */}
+                {/* Заголовок */}
                 <div className="glass-card p-6 md:p-8">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="min-w-0">
@@ -198,7 +201,10 @@ export default function Show({ auth, organization, group, availableStudents, ava
                                 </div>
                             )}
                         </div>
+
+                        {/* Кнопки действий */}
                         <div className="inline-flex items-center self-start gap-2">
+
                             <Tooltip content={
                                 <>
                                     <div className="flex items-start gap-2 mb-2">
@@ -226,18 +232,19 @@ export default function Show({ auth, organization, group, availableStudents, ava
                                     ?
                                 </button>
                             </Tooltip>
+
                             <button
                                 onClick={() => setIsInviteModalOpen(true)}
                                 className="btn-primary text-sm ml-2"
                             >
-                                + Приглашение
+                                Пригласить
                             </button>
-                            <Link
-                                href={route('group.index', { organization: organization.id })}
-                                className="btn-ghost text-sm ml-2"
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="btn-primary gap-2"
                             >
-                                ← К списку групп
-                            </Link>
+                                Редактировать
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -291,6 +298,7 @@ export default function Show({ auth, organization, group, availableStudents, ava
                 </div>
             </div>
 
+            {/* Модалка приглашения */}
             <CreateGroupInvitationForm
                 isOpen={isInviteModalOpen}
                 onClose={() => setIsInviteModalOpen(false)}
@@ -298,6 +306,17 @@ export default function Show({ auth, organization, group, availableStudents, ava
                 group={group}
                 onSuccess={() => {
                     setIsInviteModalOpen(false);
+                    router.reload({ only: ['group'], preserveScroll: true });
+                }}
+            />
+
+            <EditGroupForm
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                organization={organization}
+                group={group}
+                onSuccess={() => {
+                    setIsEditModalOpen(false);
                     router.reload({ only: ['group'], preserveScroll: true });
                 }}
             />

@@ -33,20 +33,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        DB::listen(function ($query) {
-            if ($query->time > config('logging.slow_query.threshold', 100)) {
-                Log::channel('slow_queries')->warning('Slow query detected', [
-                    'time_ms'   => $query->time,
-                    'sql'       => $query->sql,
-                    'bindings'  => $query->bindings,
-                    'url'       => request()->fullUrl(),
-                    'user_id'   => auth()->id(),
-                    'route'     => optional(request()->route())->getName(),
-                    'connection'=> $query->connectionName,
-                ]);
-            }
-        });
-
         Relation::morphMap([
             'lesson_task'     => LessonTask::class,
             'homework'       => Homework::class,

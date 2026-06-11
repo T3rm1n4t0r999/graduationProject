@@ -20,12 +20,12 @@ class DashboardController extends Controller
 
         // Все организации пользователя (до 3-х)
         $organizations = $user->organizations()
-            ->select(['organizations.id', 'organizations.name', 'organizations.status', 'organizations.plan'])
-            ->with(['bot' => fn($q) => $q->select(['id', 'organization_id', 'is_active', 'name'])])
+            ->select(['organizations.id', 'organizations.name', 'organizations.status'])
+            ->with(['bot' => fn($q) => $q->select(['id', 'organization_id', 'name', 'is_active'])])
             ->withCount('users')
             ->withPivot('role')
-            ->orderByDesc('pivot_joined_at')
             ->get();
+
 
         // Мини-статистика для всех организаций (для Overview карточек)
         $overviewStats = $this->dashboardService->getAllOrganizationsOverview($organizations);

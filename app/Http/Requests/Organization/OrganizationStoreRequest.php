@@ -17,7 +17,6 @@ class OrganizationStoreRequest extends FormRequest
                 'string',
                 Rule::email()->strict(),
                 'max:255',
-                Rule::unique('users', 'email')->ignore(Auth::id()),
             ],
         ];
     }

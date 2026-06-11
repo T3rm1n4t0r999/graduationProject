@@ -69,7 +69,7 @@ class ModuleController extends Controller
                     $q->orderBy($filters['sort'] === 'lessons_count' ? 'lessons_count' : $filters['sort'], $direction);
                 }
             }, fn($q) => $q->orderBy('order'))
-            ->paginate(20); // ✅ Пагинация вместо get()
+            ->paginate(9); // ✅ Пагинация вместо get()
 
         $courses = $organization->courses()
             ->select(['id', 'title', 'organization_id'])

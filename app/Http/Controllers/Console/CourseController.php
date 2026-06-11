@@ -8,6 +8,7 @@ use App\Http\Requests\Course\CourseStoreRequest;
 use App\Http\Requests\Course\CourseUpdateRequest;
 use App\Http\Resources\CourseResource;
 use App\Http\Resources\OrganizationResource;
+use App\Jobs\SyncAutoAssignJob;
 use App\Models\Course;
 use App\Models\Organization;
 use App\Models\StudentCourse;
@@ -68,7 +69,7 @@ class CourseController extends Controller
             }, function ($q) {
                 $q->orderBy('order'); // по умолчанию
             })
-            ->paginate(20);
+            ->paginate(9);
 
         return Inertia::render('Console/Course/List', [
             'organization' => new OrganizationResource($organization),
@@ -86,44 +87,18 @@ class CourseController extends Controller
 
         $validated = $request->validated();
 
-        $course = $organization->courses()->create($validated);
-        $this->syncAutoAssign($organization, $course);
-        return redirect()
-            ->route('course.index', new OrganizationResource($organization))
-            ->with('success', 'Курс успешно создан.');
+
+        $course = DB::transaction(function () use ($organization, $validated) {
+            return $organization->courses()->create($validated);
+        });
+
+        if ($course->auto_assign) {
+            SyncAutoAssignJob::dispatch($course->id, $organization->id)
+                ->afterCommit();
+        }
+        return back()->with('success', 'Курс успешно создан');
     }
 
-    private function syncAutoAssign(Organization $organization, Course $course)
-    {
-        if (!$course->auto_assign) {
-            return;
-        }
-
-        // 1. Загружаем только ID студентов (массив чисел), а не тяжелые Eloquent-модели
-        $studentIds = $organization->students()->pluck('id');
-
-        if ($studentIds->isEmpty()) {
-            return;
-        }
-
-        $now = now();
-        // 2. Формируем массив данных для пакетной вставки
-        $data = $studentIds->map(fn($studentId) => [
-            'student_id'      => $studentId,
-            'course_id'       => $course->id,
-            'organization_id' => $organization->id,
-            'granted_by'      => 'auto',
-            'granted_at'      => $now,
-        ])->toArray();
-
-        // 3. upsert делает массовый INSERT.
-        // Если связь уже есть (уникальный ключ student_id + course_id), он обновит только granted_by и granted_at
-        StudentCourse::upsert(
-            $data,
-            ['student_id', 'course_id'], // Уникальные колонки для проверки дубликатов
-            ['granted_by', 'granted_at'] // Колонки для обновления при совпадении
-        );
-    }
 
     /**
      * Просмотр одного курса.
@@ -176,7 +151,9 @@ class CourseController extends Controller
 
         $validated = $request->validated();
         $course->update($validated);
-        $this->syncAutoAssign($organization, $course);
+        if ($course->auto_assign) {
+            SyncAutoAssignJob::dispatch($course->id, $organization->id);
+        }
         return redirect()->route('course.show', [
             'organization' => new OrganizationResource($organization),
             'course' => new CourseResource($course),

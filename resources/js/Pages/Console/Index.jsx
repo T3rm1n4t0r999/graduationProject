@@ -18,10 +18,9 @@ const MetricCard = ({ label, value, href, color = 'primary', trend, icon: Icon }
     return (
         <Link href={href || '#'} className="glass-card p-5 flex flex-col gap-3 hover:shadow-lg transition-shadow duration-300 group">
             <div className="flex justify-between items-start">
-                <span className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</span>
-                {Icon && <Icon className="w-5 h-5 opacity-80" />}
+                <span className="text-xs font-medium uppercase tracking-wide opacity-70 text-meta">{label}</span>
             </div>
-            <div className="flex items-end justify-between">
+            <div className="flex items-end justify-between text-meta">
                 <span className="text-3xl font-bold" style={{ color: colors.text }}>{value}</span>
                 {trend && (
                     <span className={`flex items-center text-sm font-medium ${trend > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>

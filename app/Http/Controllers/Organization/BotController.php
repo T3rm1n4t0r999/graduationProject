@@ -122,10 +122,10 @@ class BotController extends Controller
         $this->authorize('update', $bot);
 
         $newStatus = !$bot->is_active;
-
+        $message = $newStatus ? 'Бот запускается' : 'Бот останавливается';
         // Отправляем в очередь, чтобы не блокировать сервер
         dispatch(new ToggleBotStatusJob($bot, $newStatus));
 
-        return back()->with('success', 'Бот запускается.');
+        return back()->with('success', $message);
     }
 }

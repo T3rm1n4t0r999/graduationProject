@@ -21,6 +21,8 @@ class ToggleBotStatusJob implements ShouldQueue
     {
         $action = $this->newStatus ? 'start-bot' : 'stop-bot';
         $externalUrl = config('services.bot_manager.url');
+        $secret = config('services.bot_manager.secret');
+
 
         if (!$externalUrl) {
             Log::error('Bot manager URL not configured');
@@ -29,10 +31,9 @@ class ToggleBotStatusJob implements ShouldQueue
 
         try {
             $response = Http::timeout(10)
-                // Убрали withoutVerifying() для безопасности!
-                // Настройте корректные SSL сертификаты на внешнем сервере.
+                ->withHeader('X-Manager-Token', $secret)
                 ->post($externalUrl . '/admin/' . $action, [
-                    'token' => $this->bot->token, // Автоматически расшифруется
+                    'token' => $this->bot->token,
                 ]);
 
             if ($response->successful()) {

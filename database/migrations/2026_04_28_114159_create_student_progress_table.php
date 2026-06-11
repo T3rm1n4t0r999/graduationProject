@@ -11,29 +11,23 @@ return new class extends Migration
         Schema::create('student_progress', function (Blueprint $table) {
             $table->id();
 
-            // Полиморфные поля
             $table->unsignedBigInteger('progressable_id');
             $table->string('progressable_type');
-
-            // Связь со студентом
             $table->foreignId('student_id')->constrained()->onDelete('cascade');
-
-            // Данные прогресса
             $table->json('answers')->nullable();
             $table->json('attached_files')->nullable();
             $table->integer('points')->default(0);
             $table->integer('max_points')->default(0);
-            $table->integer('attempt')->default(1); // Убрали autoIncrement()
+            $table->integer('attempt')->default(1);
             $table->json('metadata')->nullable();
             $table->foreignId('organization_id')
                 ->constrained('organizations')
                 ->cascadeOnDelete();
             $table->boolean('checked')->default(false);
-            $table->integer('checked_by')->default(0);
+            $table->integer('checked_by')->nullable();
             $table->boolean('finished_by_timeout')->nullable();
             $table->timestamps();
 
-            // Уникальный индекс для предотвращения дублирования попыток
             $table->unique([
                 'student_id',
                 'progressable_type',
@@ -41,7 +35,6 @@ return new class extends Migration
                 'attempt'
             ], 'student_progress_unique_attempt');
 
-            // Индексы для быстрого поиска
             $table->index(['progressable_type', 'progressable_id']);
             $table->index(['student_id', 'progressable_type', 'progressable_id']);
             $table->index(['student_id', 'attempt']);

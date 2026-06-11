@@ -34,3 +34,8 @@ Thumbs.db
 *.php~
 *.tmp
 ```
+**/caddy
+frankenphp
+frankenphp-worker.php
+rr
+.rr.yaml

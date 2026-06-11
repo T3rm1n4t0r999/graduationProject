@@ -10,23 +10,17 @@ return new class extends Migration
     {
         Schema::create('files', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Оригинальное имя файла
-            $table->string('path'); // Путь в storage
+            $table->string('name');
+            $table->string('path');
             $table->string('disk')->default('public');
             $table->integer('size')->nullable();
             $table->string('mime_type')->nullable();
             $table->string('extension')->nullable();
-
-// Полиморфные связи
             $table->unsignedBigInteger('fileable_id');
             $table->string('fileable_type');
-
             $table->timestamps();
 
-            // ✅ ПРАВИЛЬНЫЙ ПОРЯДОК: type первым, затем id
             $table->index(['fileable_type', 'fileable_id'], 'files_fileable_index');
-
-            // ✅ Индекс для быстрой фильтрации по типу файла (используется в Question::imageFile)
             $table->index('mime_type');
         });
     }
